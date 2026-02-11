@@ -2,24 +2,36 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 
 const AuthContext = createContext(null);
 
+// TODO: Remove DEV_MODE mock when Week 2 auth is implemented
+const DEV_MODE = true;
+const MOCK_USER = {
+  id: 1,
+  name: "Dev Admin",
+  email: "admin@dev.local",
+  role: "admin",  // Change to "agent" or "customer" to preview other dashboards
+};
+
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(() => localStorage.getItem("token"));
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(DEV_MODE ? MOCK_USER : null);
+  const [token, setToken] = useState(() => DEV_MODE ? "dev-token" : localStorage.getItem("token"));
+  const [loading, setLoading] = useState(false);
 
   const logout = useCallback(() => {
+    if (DEV_MODE) return;
     localStorage.removeItem("token");
     setToken(null);
     setUser(null);
   }, []);
 
   const login = useCallback((accessToken, userData) => {
+    if (DEV_MODE) return;
     localStorage.setItem("token", accessToken);
     setToken(accessToken);
     setUser(userData);
   }, []);
 
   useEffect(() => {
+    if (DEV_MODE) return;
     if (!token) {
       setLoading(false);
       return;
@@ -44,7 +56,7 @@ export function AuthProvider({ children }) {
     loading,
     login,
     logout,
-    isAuthenticated: !!user,
+    isAuthenticated: DEV_MODE || !!user,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
