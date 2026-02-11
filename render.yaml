@@ -29,6 +29,8 @@ services:
         value: all-MiniLM-L6-v2
       - key: UPLOAD_DIR
         value: ./uploads
+      - key: CORS_ORIGINS
+        value: https://rag-customer-support.vercel.app
       - key: PYTHON_VERSION
         value: "3.12.3"
 
