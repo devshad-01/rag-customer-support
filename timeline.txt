@@ -1,0 +1,49 @@
+IMPLEMENTATION SCHEDULE
+  Rag Based System for Customer Support
+
+Week
+Phase
+Main Activities
+Key Deliverables
+1
+Project Setup
+Set up FAST API backend, React frontend, PostgreSQL, Qdrant, and GitHub. Configure database schema from ERD.
+Running backend & frontend, connected DBs, GitHub repository
+2
+Authentication & Users
+Implement login, registration, and role-based access (Admin, Agent, Customer). Build auth UI in React.
+Secure login system, user roles working
+3
+Document Management
+Implement PDF upload, parsing, chunking, and embedding using LlamaIndex. Store embeddings in Qdrant. Build Admin document UI.
+Documents indexed and searchable
+4
+RAG Pipeline
+Implement query handling. Retrieve relevant chunks from Qdrant and send them to LLM using LangChain.
+AI produces document-grounded answers
+5
+Explainability
+Return source documents with AI responses. Display evidence in the chat interface.
+Explainable AI responses
+6
+Human Fallback & Ticketing
+Implement confidence scoring. Create ticketing and escalation system. Build Agent dashboard.
+AI escalation and human support working
+7
+Analytics & Logging
+Log queries, responses, and escalations. Build admin analytics dashboard.
+System usage and performance visible
+8
+Reporting
+Implement CSV and PDF export for analytics and query logs.
+Downloadable reports
+9
+Testing & Optimization
+Test all modules. Fix bugs. Optimize performance and security.
+Stable and reliable system
+10
+Finalization
+Collect results, take screenshots, write final report.
+Completed system and documentation
+
+

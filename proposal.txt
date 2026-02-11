@@ -1,0 +1,607 @@
+
+
+DECLARATION
+This project is my original work and has not been presented for a degree in any other 
+University 
+………………….      
+Signature       
+Names   ………………….    
+Reg number  ………………….    
+
+………………… 
+Date  
+
+
+This project has been submitted for examination with my approval as University Supervisor 
+………………      
+Signature       
+Names  ………………….    
+Maseno,Kenya 
+
+………………. 
+Date
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ACKNOWLEDGMENT
+I wish to express my sincere gratitude to all those who contributed to the successful completion of this project.My deepest appreciation to Dr. James Obuhuma, my supervisor, for his guidance, support, and constructive feedback throughout the development of this project proposal. His direction has been invaluable in shaping the problem statement, refining the objectives, and clarifying the methodology that will guide the implementation phase in the next semester.I am also grateful to the lecturers in the Department of Computer Science for the knowledge and academic support they provided.
+
+Special thanks go to my classmates, friends, and fellow students who participated by offering ideas and providing helpful suggestions.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ABSTRACT
+This project presents the planned design and development of a Retrieval-Augmented Generation (RAG) based customer support system aimed at improving the accuracy, transparency, and reliability of AI-assisted customer service. Modern customer support systems face challenges in providing fast, accurate, and contextually relevant responses to user queries. Traditional manual support and static FAQs are often slow, resource-intensive, and inconsistent, while conventional AI chatbots frequently generate responses without clear explanations or references, reducing user trust and satisfaction. This project proposes the design and development of a centralized Retrieval-Augmented Generation (RAG) based customer support system that integrates document ingestion, AI-powered response generation, explainability, human fallback, and analytics.The system supports uploading and processing text-based documents such as PDFs, stores content in a vector database, and leverages a pre-trained large language model (LLM) to generate context-aware responses. An explainability mechanism links AI responses to source documents, enhancing transparency, while a human fallback module escalates low-confidence or out-of-scope queries to support agents. Additionally, an analytics dashboard visualizes query trends, response performance, and escalation metrics, providing actionable insights for decision-making. This project demonstrates the practical application of advanced AI in customer support, aiming to improve efficiency, enhance transparency, optimize resource allocation, and increase customer satisfaction. The study highlights the potential of centralized RAG systems as scalable, intelligent solutions for modern customer support operations.
+
+
+Table Of Contents
+
+DECLARATION	i
+ACKNOWLEDGMENT	ii
+ABSTRACT	iii
+LIST OF ABBREVIATIONS	viii
+CHAPTER 1: INTRODUCTION	1
+1.0 Background of the Study/Project	1
+1.1 Statement of the Problem	2
+1.2 Justification of the Problem	2
+1.3 Objectives	3
+1.3.1 General Objective	3
+1.3.2 Specific Objectives	3
+1.4 Research Questions	3
+1.5 Scope of the Study/Project	4
+1.6 Assumptions and Limitations	4
+1.6.1 Assumptions	4
+1.6.2 Limitations	4
+1.7 Significance of the Project	5
+1.8 Summary	5
+CHAPTER 2: LITERATURE REVIEW	6
+2.0 Introduction	6
+2.1 Zendesk Answer Bot	6
+2.2 Google Dialogflow	6
+2.3 Salesforce Service Cloud	7
+2.4 Microsoft Dynamics 365 Virtual Agent	7
+2.5 IBM Watson Assistant	8
+2.6 The Research Gap	8
+2.7 Conceptual framework	9
+2.8 Summary	10
+CHAPTER 3: SYSTEM ANALYSIS AND DESIGN	11
+3.0 Introduction	11
+3.1 Methodology	11
+3.1.1 Data Collection Tools and Techniques	11
+3.1.2 Data Analysis Tools and Techniques	12
+3.2 System Analysis.	13
+3.2.1 User and System Requirements	13
+3.2.2 Functional Requirements	14
+3.2.3 Non-Functional Requirements	15
+3.3 System Design	15
+3.3.1 System Architecture	15
+3.3.2 Use Case Diagram	17
+3.3.3 Context Diagram	19
+3.3.4 Data Flow Diagrams (DFDs)	21
+3.3.5 Class Diagram	24
+3.3.6 Entity Relationship Diagram (ERD)	25
+3.3.7 Project Timeline and Budget	26
+REFERENCES	27
+APPENDICES	28
+Appendix I: Sample Questionnaire	28
+Appendix II: Gantt Chart (Project Timeline)	29
+Appendix III:	29
+
+
+
+List Of Figures
+Figure 11:Conceptual Framework	9
+Figure 1:Expected Pie Chart of User Satisfaction Levels	12
+Figure 2: System Architecture Diagram	16
+Figure 3:Use Case Diagram	18
+Figure 4:Context Diagram	20
+Figure 5: DFD Level 0: RAG Based System for Customer Support	22
+Figure 6:DFD Level 1: Core System Processes	23
+Figure 7:DFD Level 2: Query Processing and RAG Workflow	24
+Figure 8:DFD Level3 Generate AI Response (RAG)	25
+Figure 9:Class Diagram	26
+Figure 10:Entity Relationship Diagram (ERD)	27
+Figure 12:Gantt Chart(Project Timeline)	30
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+List Of Tables
+Table 1: The Reseach Gap	8
+Table 2:Project Budget	30
+
+
+LIST OF ABBREVIATIONS
+
+Abbreviation
+Full Form
+AI
+Artificial Intelligence
+FAQs
+Frequently Asked Questions
+RAG
+Retrieval-Augmented Generation
+SME
+Small and Medium-sized Enterprises
+NLP
+Natural Language Processing
+CSV
+Comma-Separated Values
+PDF
+Portable Document Format
+API
+Application Programming Interface
+DFD
+Data Flow Diagram
+ERD
+Entity Relationship Diagram
+Qdrant
+Vector Database (used for semantic search)
+ML
+Machine Learning
+
+
+
+
+
+
+
+
+
+
+
+
+
+CHAPTER 1: INTRODUCTION
+1.0 Background of the Study/Project
+Customer support is a critical function for organizations seeking to maintain customer satisfaction and loyalty. Traditionally, many organizations have relied on manual support personnel and static FAQs to address user queries. While this approach allows for human judgment in complex cases, it is resource-intensive, slow, and often inconsistent, particularly during peak workloads. As a result, customers may experience delays, incomplete answers, or frustration, and organizations face higher operational costs and inefficiencies. With increasing customer expectations for instant, accurate, and 24/7 support, the limitations of manual systems have become even more pronounced and costly.
+In recent years, AI-powered chatbots and automated support systems have emerged as potential solutions, offering faster response times and the ability to handle high query volumes. However, conventional AI models often rely solely on pre-trained data and fail to provide contextually accurate or explainable responses. Many systems also lack mechanisms to identify and escalate out-of-scope queries, limiting their effectiveness and user trust.
+To address these gaps, Retrieval-Augmented Generation (RAG) systems have been proposed as an advanced solution. By integrating semantic document retrieval with AI-driven response generation, RAG enables accurate, context-aware, and explainable answers while providing analytics for performance monitoring and escalation management. This study seeks to explore the design and implementation of a RAG-based customer support system, which promises to improve operational efficiency, enhance transparency, and ensure higher customer satisfaction, highlighting its practical and strategic significance for modern organizations.
+
+
+
+
+1.1 Statement of the Problem
+In modern customer support systems, providing fast, accurate, and contextually relevant responses to user queries remains a significant challenge. Many organizations rely on static FAQs or keyword-based search systems, which often fail to address complex or nuanced questions, leading to customer frustration and increased workload for support agents. Some organizations still depend heavily on manual customer support personnel, which is resource-intensive, slow, and difficult to scale. Additionally, while AI chatbots are increasingly used, they often generate responses without clear explanations or references to source material, reducing user trust and transparency.
+Current support systems also struggle with handling out-of-scope queries, requiring human intervention without a structured method for escalation or performance analysis. Furthermore, organizations lack comprehensive analytics to monitor query trends, response effectiveness, and escalation rates, making it difficult to optimize customer support operations.
+
+1.2 Justification of the Problem
+Despite the rapid adoption of AI in customer support, many organizations still rely on manual support personnel or traditional generative models, which often provide generic or inaccurate responses because they depend solely on pre-trained data rather than real-time, context-specific information. Manual customer support is resource-intensive, slow to respond during peak workloads, and inconsistent in quality, highlighting the need for automated solutions that can handle routine queries efficiently and scale without proportionally increasing staffing costs. (Leeway Hertz, 2025; Multimodal, 2025)RAG systems address these limitations by grounding AI responses in up-to-date documents, improving both accuracy and relevance. (International Journal of Science and Research, 2025; Microsoft Cloud Blog, 2025) Transparency and trust are also critical, yet many AI systems lack mechanisms to explain how answers are generated. RAG systems link responses to source materials, enabling users to verify information and increasing confidence in AI outputs. (TechTarget,2023)
+Moreover, existing support systems struggle to identify and escalate low-confidence or out-of-scope queries. Integrating retrieval, explainability, and escalation analytics can significantly enhance support effectiveness, operational efficiency, and customer trust, justifying the development of a comprehensive RAG-based support solution.
+1.3 Objectives
+1.3.1 General Objective
+To design and develop an RAG-based, customer support system that enhances response accuracy, transparency through document-grounded AI, explainable responses and human fallback mechanisms.
+1.3.2 Specific Objectives
+To design and implement a RAG pipeline that supports document uploading, PDF parsing, chunking, embedding, and storage in a vector database, and to integrate this with an LLM to generate responses using the retrieved document context.
+To implement an explainability mechanism that displays supporting source documents for each AI-generated response, ensuring that at least one evidence source is provided to enhance transparency.
+To develop a human fallback mechanism that detects out-of-scope or low-confidence queries and escalates them to human support agents, and to analyze escalation performance using analytics on query handling outcomes.
+To develop an analytics and reporting module that visualizes customer query trends, response performance, and escalation rates, and ensures that reports can be exported in PDF or CSV.
+
+1.4 Research Questions
+In line with the specific above, the study seeks to answer the following questions:
+How can a RAG pipeline be designed and implemented to efficiently ingest and process documents while enabling accurate AI-generated responses using retrieved context?
+How can an explainability mechanism be integrated into the RAG system to provide source-based evidence that enhances transparency and user trust?
+What methods can be employed to identify low-confidence or out-of-scope queries and effectively escalate them to human agents, while evaluating escalation performance?
+How can analytics and reporting tools be designed to effectively visualize customer query trends, response performance, and escalation rates, while allowing data export in multiple formats?
+
+
+1.5 Scope of the Study/Project
+This study focuses on designing and developing a customer support system that integrates document ingestion, AI-powered response generation, explainability, human fallback, and analytics. It will support uploading and processing PDFs, storing content in a vector database, and generating contextually accurate responses using an LLM. The system will link responses to source documents, escalate low-confidence or out-of-scope queries to human agents, and provide an analytics dashboard to visualize query trends, response performance, and escalation metrics. The project does not cover enterprise-level system integration, low-level AI/ML model training. Its focus remains on integrating existing AI capabilities to demonstrate the effectiveness RAG approach in customer support.
+
+1.6 Assumptions and Limitations
+1.6.1 Assumptions
+Document Availability: It is assumed that sufficient organizational documents (PDFs, manuals, FAQs) will be available for ingestion into the centralized support system to enable meaningful retrieval and response generation.
+Pre-trained AI Model Reliability: It is assumed that the pre-trained large language model (LLM) used will generate accurate and contextually relevant responses when provided with retrieved document information
+1.6.2 Limitations
+Dependence on Third-Party AI APIs
+The system’s AI performance will rely on external APIs, which may introduce limitations such as usage quotas or subscription costs. This will be managed by restricting scope to proof-of-concept demonstrations and use of free hugging face llm models or Ollama model.
+Exclusion of Mobile-Native Applications
+The project will not develop a dedicated mobile app due to time and resource constraints. However, the web application will be responsive to allow access via mobile browsers.
+
+
+1.7 Significance of the Project
+The proposed RAG-based centralized customer support system offers significant value to both organizations and users. By integrating document retrieval, AI-powered response generation, explainability, and human fallback, the system enhances the speed, accuracy, and consistency of customer support operations. Customers benefit from faster, contextually relevant, and transparent responses, improving satisfaction and trust in the organization.
+For organizations, the system reduces reliance on manual support personnel, lowering operational costs and allowing human agents to focus on complex or escalated queries. The analytics and reporting module provides actionable insights into query trends, response performance, and escalation rates, enabling data-driven decision-making and continuous improvement.
+Overall, the project demonstrates the practical application of advanced AI in customer support, showing how a centralized RAG approach can improve efficiency, enhance transparency, and optimize resource allocation, while providing a scalable solution that can adapt to growing customer demands and organizational needs.
+
+1.8 Summary
+The chapter has introduced the context and rationale for developing an AI-powered RAG Based customer support platform. It outlined the problem, justification, objectives, research questions, scope, and assumptions, highlighting the relevance and expected impact of the project. The discussion sets the foundation for the subsequent chapters, which will focus on the design, implementation, and evaluation of the proposed system.
+
+
+
+
+
+
+
+CHAPTER 2: LITERATURE REVIEW
+2.0 Introduction
+This chapter provides an overview of customer support systems and service platforms with capabilities powered by AI that are closely related to the proposed prototype. This review summarizes their features, merits, and disadvantages for research gap presentation. The systems reviewed are Zendesk Anser bot, Google Dialogflow, IBM Watson Assistant, Salesforce Service Cloud, and Microsoft Dynamics 265 Virstual Agent. This review identifies opportunities for innovation in scalability, AI, and efficiency in the systems examined.
+2.1 Zendesk Answer Bot
+Zendesk is a widely used customer support platform delivered via a software-as-a-service (SaaS) model, facilitating omnichannel communication between organizations and customers across industries such as education, healthcare, retail, telecommunications, and financial services (Zendesk, 2025). Its key features include ticketing, messaging, live chat, voice support, reporting, analytics, and integration with over 1,200 third-party applications. AI-driven products, such as automated responses, workflow routing, and workforce management add-ons, provide support for customer query handling.
+While Zendesk offers robust ticketing and omnichannel features, AI-driven responses often lack explainability and do not consistently link answers to source documents, which can reduce transparency and user trust. Additionally, its analytics primarily focus on ticket volume and resolution time, offering limited insights into the quality of AI-generated responses or human fallback performance. These limitations highlight the need for a centralized, RAG-based support system that provides context-aware, explainable AI responses with integrated analytics and human escalation capabilities.
+2.2 Google Dialogflow
+Google Dialogflow is a cloud-based conversational AI platform that enables the creation of chatbots and virtual agents capable of understanding and processing natural language queries (Google Cloud, 2022). Its features include intent recognition, entity extraction, multi-channel integration, and automated responses. Dialogflow also provides analytics dashboards to monitor agent performance and user interactions.
+While Dialogflow performs well for structured queries and predefined intents, it is limited in handling unstructured or large document repositories and cannot inherently provide source-linked or explainable AI responses. Additionally, while it can integrate with human agents for escalations, built-in analytics for evaluating the performance of human fallback are minimal. These limitations highlight the need for a centralized RAG-based support system that combines context-aware retrieval, explainable AI responses, human escalation, and performance analytics.
+2.3 Salesforce Service Cloud
+The OpenAI RAG (Retrieval-Augmented Generation) prototype combines semantic document retrieval with large language model (LLM) response generation to improve the accuracy and contextual relevance of AI-powered customer support (OpenAI, 2024). Key features include: semantic search across structured and unstructured documents, context-aware response generation, and linking answers to source documents for enhanced explainability.
+While the prototype demonstrates improved context awareness and explainability compared to traditional AI chatbots, it is typically limited to experimental or proof-of-concept implementations. It often lacks integration into centralized customer support platforms, human fallback mechanisms for low-confidence or out-of-scope queries, and comprehensive analytics dashboards to monitor query trends, response quality, or escalation performance. These limitations underscore the need for a centralized RAG-based support system that integrates document retrieval, explainable AI responses, human fallback, and analytics to address real-world customer support challenges.
+2.4 Microsoft Dynamics 365 Virtual Agent
+Microsoft Dynamics 365 Virtual Agent is an AI-driven customer support solution integrated into the Dynamics 365 ecosystem (Microsoft, 2023). It offers natural language processing, multi-channel support, and analytics dashboards to monitor customer interactions. Its strengths include integration with enterprise CRMs, automated ticket creation, and contextual suggestions for support agents. However, it is limited in retrieving answers from unstructured or large document repositories and lacks advanced explainability for AI-generated responses, which can reduce transparency. Additionally, while it provides analytics, detailed evaluation of human fallback and query escalation performance is not fully integrated.
+2.5 IBM Watson Assistant
+IBM Watson Assistant is an AI-powered conversational system that uses NLP and machine learning to automate customer support and provide intelligent assistance across multiple channels (IBM, 2023). Key features include intent recognition, entity extraction, multi-language support, integration with enterprise applications, and analytics dashboards for monitoring interactions. Watson Assistant excels at structured FAQs and routine query handling, providing organizations with faster and more consistent responses.
+However, Watson Assistant has limitations when handling complex, unstructured documents. It often cannot retrieve context-specific information from large knowledge bases, and AI-generated responses are not always linked to supporting source documents, which reduces transparency and explainability. These gaps indicate the need for systems that combine context-aware retrieval, explainable AI responses, human fallback, and integrated analytics, which the proposed RAG-based system aims to address.
+2.6 The Research Gap
+Existing System
+Brief Description
+Key Identification
+Gap (In features or functionality)
+IBM Watson Assistant (IBM, 2023)
+AI-powered chatbot with NLP, multi-channel support, and analytics dashboards
+Intent recognition, entity extraction, structured FAQ handling, cross-platform integration
+Limited retrieval from unstructured documents, lacks source-linked explainable responses and integrated human fallback analytics
+Google Dialogflow (Google Cloud, 2022)
+Cloud-based conversational AI for chatbots and virtual agents
+Intent recognition, entity extraction, multi-channel integration, analytics dashboards
+Cannot inherently provide source-linked or explainable responses; minimal human fallback analytics
+OpenAI RAG Prototype (OpenAI, 2024)
+Combines semantic document retrieval with LLM responses
+Context-aware AI responses, source linking, improved explainability
+Limited to experimental environments; lacks centralized system integration, human fallback, and analytics dashboards
+Microsoft Dynamics 365 Virtual Agent (Microsoft, 2023)
+AI-driven virtual agent integrated with enterprise CRM
+Multi-channel support, contextual suggestions, analytics dashboards
+Limited retrieval from unstructured documents, lacks advanced explainability and human fallback analytics
+Zendesk Answer Bot (Zendesk, 2025)
+AI-based support tool for ticketing, messaging, live chat, and analytics
+Automated responses, knowledge base integration, omnichannel support
+AI responses lack explainability; limited insights into AI response quality and human fallback performance
+
+Table 1: The Reseach Gap
+The systems under review show notable advancements in automating customer service, but they are also limited in retrieving context-specific information from large unstructured documents and generating source-linked, explainable responses. Experimental RAG implementations improve context-awareness and transparency but remain proof-of-concept and lack full integration into centralized support platforms with human fallback and analytics dashboards.
+
+2.7 Conceptual framework
+The conceptual framework for this study illustrates the relationship between system design components, AI-driven processing mechanisms, and customer support outcomes. 
+In this framework, the independent variables include the document ingestion and processing pipeline, the RAG-based AI response generation, the explainability module that links responses to source documents, the human fallback mechanism for escalating low-confidence or out-of-scope queries, and the analytics and reporting system that visualizes query trends, response performance, and escalation metrics. These components collectively influence how customer queries are processed, interpreted, and resolved. The dependent variable, customer support effectiveness, is measured through the accuracy and relevance of AI responses, the efficiency of query resolution, the transparency of explanations, and overall user satisfaction. Moderating variables, such as dataset quality, system load, and user digital literacy, can strengthen or weaken the impact of the independent variables on customer support outcomes.
+
+Figure 11:Conceptual Framework
+2.8 Summary
+This chapter reviewed modern AI-powered customer support systems, including IBM Watson Assistant, Google Dialogflow, OpenAI RAG prototype, Microsoft Dynamics 365 Virtual Agent, and Zendesk Answer Bot. While these systems provide automation, natural language understanding, multi-channel support, and analytics, they face limitations in retrieving context-specific information from unstructured documents and generating source-linked, explainable AI responses. Experimental RAG implementations improve contextual relevance and transparency but remain largely prototype-level, lacking full integration into centralized support platforms, human fallback mechanisms, and comprehensive performance analytics. The identified gaps highlight the need for a centralized RAG-based customer support system that integrates document retrieval, explainable AI responses, human escalation, and analytics, addressing the challenges of efficiency, accuracy, transparency, and user satisfaction
+
+
+
+
+
+
+
+
+
+
+
+
+CHAPTER 3: SYSTEM ANALYSIS AND DESIGN
+3.0 Introduction
+This chapter will present the analysis and design of the proposed AI-Powered Customer Support System using RAG and Fast API. The chapter will cover the system development methodology to be used, the data collection and analysis tools, and the detailed system requirements. It will also provide the architectural and design models of the system, including the use case, context, data flow, class, and entity-relationship diagrams. These components will collectively provide a blueprint for the system’s development and implementation.
+3.1 Methodology
+The system will be developed using the Agile Scrum methodology. Agile Scrum will be selected due to its flexibility, iterative nature, and ability to accommodate changing requirements during development. Although the project will be implemented by a single developer, the Scrum framework will be adapted to manage the project in short, manageable iterations known as sprints.
+Each sprint will involve planning, design, coding, testing, and review. This iterative approach will allow continuous improvement of system features and seamless integration of feedback. Tools such as GitHub for version control, Notion for sprint planning, and Postman for API testing will be utilized throughout the development process.
+3.1.1 Data Collection Tools and Techniques
+The study will utilize a structured questionnaire as the primary data collection tool. The questionnaire will be designed to gather user perceptions, preferences, and challenges related to existing customer support systems, with the aim of identifying gaps that the proposed AI-powered system will address.
+The questionnaire will be developed using Google Forms to allow for digital distribution and ease of response analysis.
+Preparation and Administration
+The questionnaire will be divided into three sections:
+Section A: General information (age, gender, and occupation).
+Section B: System usage experience (targeting respondents with prior exposure to customer support tools).
+Section C: Perceptions and expectations of AI in customer support.
+The tool will be administered digitally through email and social media platforms, targeting three respondent groups:
+Customer Support Agents – to share practical system challenges.
+Frequent Users of Online Services – to provide customer experience perspectives.Responses will be automatically collected and organized within Google Forms’ dashboard. A sample of the questionnaire will be provided in Appendix I.
+
+3.1.2 Data Analysis Tools and Techniques
+The data that will be collected through Google Forms will be analyzed using both Google Forms’ in-built analytics and Microsoft Excel for descriptive analysis. The Google Forms analytics will automatically generate pie charts, showing response trends for each question. These metrics will help identify the most common issues with existing customer support systems and users’ attitudes toward AI integration.
+The analysis is expected to indicate areas of dissatisfaction with current systems, such as slow responses, high subscription costs, and limited AI functionality. 
+
+
+
+
+
+
+
+
+
+
+
+
+Interpretation (Expected):
+It is anticipated that a significant proportion of respondents will indicate dissatisfaction with existing customer support systems due to challenges such as slow response times and unclear or inconsistent automated responses. This finding will justify the need for a centralized AI-driven customer support system that leverages RAG to provide accurate, explainable, and reliable responses across organizational knowledge sources.
+
+3.2 System Analysis.
+The proposed system aims to provide automated, intelligent, and explainable responses to customer inquiries using Retrieval-Augmented Generation (RAG). 
+The backend is implemented using FAST API, the frontend is built in React, and PostgreSQL serves as the primary relational database. The AI layer integrates Hugging Face models for text generation and a vector database for efficient semantic search and retrieval.
+3.2.1 User and System Requirements
+The proposed RAG Based Customer Support System is designed to meet the needs of different types of users, including the system administrator, customer support agents, and customers. 
+Below are the main user requirements together with their corresponding system expectations.
+• Administrators should be able to upload, manage, and update customer support documents such as PDFs, manuals, and FAQs. The system should provide a document ingestion module that parses, chunks, embeds, and stores documents in a vector database.
+• Customers should be able to submit queries and interact with the AI assistant through a centralized chat interface. The system should allow session-based or anonymous query handling and provide real-time AI responses.
+• Customer support agents should be able to view AI-handled conversations and respond to escalated queries. The system should provide a support dashboard for manual intervention and monitoring of unresolved issues.
+• Customers should receive accurate answers to their queries. The system should implement a RAG pipeline integrated with a large language model to retrieve relevant document context before generating responses.
+• Customers should be able to see the sources of AI responses. The system should display explainable responses by linking each answer to the specific document or document chunks used.
+• Customer support agents should be able to take over queries when AI confidence is low or queries are out-of-scope. The system should detect these cases and escalate them to human agents for resolution.
+• Administrators and agents should be able to view analytics and generate reports. The system should provide dashboards and allow export of reports in CSV or PDF format, showing query trends, AI performance, and escalation metrics.
+
+3.2.2 Functional Requirements
+The following are the functional capabilities that the proposed system should perform:
+The system should allow administrators and customer support agents to register and log in to the centralized customer support platform.
+The system should allow administrators to upload, manage, and update customer support documents such as PDFs, manuals, and FAQs.
+The system should parse uploaded documents, split them into chunks, and generate embeddings.
+The system should store generated embeddings in a vector database for efficient retrieval.
+The system should integrate a large language model to retrieve relevant document content and generate accurate responses.
+The system should display explainable responses by linking each answer to its source document or document section.
+The system should detect low-confidence or out-of-scope queries and escalate them to human support agents.
+The system should allow support agents to view AI conversations and take over unresolved cases.
+The system should provide analytics dashboards for administrators and agents.
+The system should allow reports to be exported in CSV or PDF format.
+The system should implement role-based access control for administrators, agents, and customers.
+3.2.3 Non-Functional Requirements
+In addition to the functional capabilities, the system should meet the following non-functional requirements:
+Performance: The system shall respond to customer queries in real-time, with AI-generated responses delivered within 2–3 seconds for typical queries.
+Scalability: The system shall handle multiple concurrent users, including support agents and customers, without performance degradation.
+Security: The system shall implement secure authentication, role-based access control, and encryption for stored data, including customer queries, documents, and LLM embeddings in the vector DB.
+Usability: The system shall provide a simple, intuitive interface for customers and support agents, including easy navigation through AI responses, escalations, and dashboards.
+Maintainability: The system shall be modular to allow updates to the RAG pipeline, LLM integration, and analytics module without disrupting other components.
+Portability: The system shall be deployable on common web servers and cloud platforms, supporting both local and cloud-hosted vector DBs.
+Interoperability: The system shall allow integration with existing internal systems via standard APIs for data ingestion and query logging if required.
+
+
+3.3 System Design
+3.3.1 System Architecture
+The system adopts a three-tier architecture consisting of:
+Presentation Layer: Built with React for user interaction. It provides the interface for customers, agents, and administrators. It handles chat UI, authentication, and dashboards.
+Technology: React 
+Data Flow: Sends user requests (via REST APIs) to the backend.
+
+Application Layer: Implemented in FAST API. It processes requests, enforces business logic, and communicates with both the database and AI layer.
+Technology: FAST API
+Data Layer: Uses PostgreSQL for structured data storage and Qdrant for vector storage in the RAG model.
+Primary Database: PostgreSQL
+Stores structured, relational data (users, conversations, analytics).
+	
+Secondary Database (for AI context): Vector Database (Qdrant/Chroma/pgvector)
+Stores text embeddings for semantic search and retrieval-augmented generation. accessible via backend when forming context for the AI model.
+
+
+Figure 2: System Architecture Diagram
+
+
+
+AI Microservice Layer (External Component)
+Technology: 
+OpenAI API / Hugging Face
+LangChain. Ensures explainable answers by linking responses to document chunks.
+LlamaIndex: Handles PDF ingestion, chunking, embedding, and semantic retrieval.
+Function:
+Processes chat prompts.
+Fetches relevant context from the vector database via the backend.
+Generates intelligent or context-aware responses.
+Relationship:
+Not stored inside the data layer.
+Interacts through API calls from the backend (application layer).
+
+The diagram shows React on the client side communicating via REST API with the FASTAPI backend, which connects to PostgreSQL (for relational data) and Qdrant (for AI retrieval). The AI model (Hugging Face transformer) sits between the API and Qdrant to generate explainable answers.
+
+3.3.2 Use Case Diagram
+The use case diagram illustrates the interaction between the main users — Customer, Support Agent, System Administrator — and the system.
+Actors & Use Cases
+1. Customer
+Register / Login: Create an account or sign in to access the platform.
+Submit Support Ticket: Create and send a query or issue to the support team.
+View Ticket Status: Track progress or responses from support agents.
+Chat with Agent: Engage in real-time chat about their issue.
+View Explainable Source Documents.
+2. Support Agent
+Login: Access the system securely.
+View Assigned Tickets: See tickets automatically assigned or filtered by category.
+Respond to Tickets / Chat: Reply to customer messages and provide assistance.
+Update Ticket Status: Mark issues as “In Progress,” “Resolved,” or “Escalated.”
+3. System Admin 
+Manage User Accounts and Roles
+View Analytics Dashboard: Check metrics like ticket volume, response time, satisfaction.
+Generate Reports (CSV/PDF).
+
+
+
+
+Figure 3:Use Case Diagram
+
+
+
+
+
+
+
+3.3.3 Context Diagram
+The context diagram represents the system as a single process interacting with external entities such as customers, agents, and admins.
+
+Figure 4:Context Diagram
+The context diagram illustrates the overall interaction between the centralized AI-powered customer support system and its external entities. It represents the system as a single high-level process (Process 0) and outlines the flow of information between the system and its users or external components.
+At the center of the diagram is the AI-Powered Customer Support System, which integrates several core modules — including Authentication & Authorization, Document Manager, RAG Pipeline (AI Assistant), Explainability Module, Human Fallback, Analytics & Reporting, and Dashboard. These modules collectively handle user authentication, document ingestion, AI-assisted support, explainable responses, human escalation, and analytics.
+Externally, the system interacts with three primary user roles:
+Customers, who submit queries via the chat interface, view AI responses, and access supporting document references.
+Support Agents, who manage escalated queries flagged by the system and respond to unresolved issues.
+Administrators, who oversee system usage, manage uploaded documents, monitor AI performance, and generate analytics reports.
+Additionally, the system interfaces with external data and service layers:
+Relational Database (PostgreSQL) for storing user accounts, queries, tickets, and analytics logs.
+Vector Database (Qdrant/FAISS) for storing document embeddings used by the RAG process.
+Optional External Integrations, such as email or Slack, for notifications of escalated queries.
+The data flow is bidirectional: customers submit queries and receive responses; the RAG pipeline retrieves relevant document chunks; the AI Assistant generates explainable responses; escalated queries are routed to support agents; and administrators access analytics dashboards.
+
+
+3.3.4 Data Flow Diagrams (DFDs)
+The DFDs illustrate how data moves through the system:
+DFD Level 0: RAG Based System for Customer Support
+The Level 0 DFD presents the system as a single high-level process interacting with external entities: Customers, Support Agents, and Administrators. It highlights the overall system boundary and data exchanges, showing how users submit queries, receive AI responses, and access analytics dashboards.
+ 
+Figure 5: DFD Level 0: RAG Based System for Customer Support
+DFD Level 1: Core System Processes
+The Level 1 DFD elaborates on major internal operations. When a customer submits a query, the Query Intake and Classification module processes and identifies the intent of the message.
+The RAG Retrieval module then interacts with the RAG Engine to fetch relevant context from the Knowledge Base and generate an AI-powered response. The Explainability Module links responses to source documents. If confidence is low, the Human Fallback Module flags the query for support agent intervention. All interactions — queries, logs, and analytics — are stored in the relational and vector databases. The Analytics & Reporting module generates dashboards and exports reports for administrators and agents.
+
+
+Figure 6:DFD Level 1: Core System Processes 
+
+DFD Level 2: Query Processing and RAG Workflow
+The Level 2 DFD decomposes the query processing flow. After submission, queries are validated and preprocessed, including intent detection and noise removal. The system generates embeddings and retrieves relevant document chunks from the Vector DB.
+The retrieved context and original query are sent to the RAG Engine via the Generate AI Response module. The AI produces a response that is either returned directly to the customer or flagged for human review if confidence is low. All query data, context, and AI responses are stored for analytics and performance monitoring.
+
+
+Figure 7:DFD Level 2: Query Processing and RAG Workflow 
+
+DFD Level3 Generate AI Response (RAG)
+The Level 3 DFD details the internal workflow of the Generate AI Response module. The system constructs a structured prompt using both the customer query and retrieved contextual documents. This prompt is sent to the RAG Engine, which generates an AI-powered response.
+The system then evaluates the confidence level of the generated output — if confidence is below a preset threshold, the query is automatically flagged for human review by a Support Agent. Otherwise, the response is formatted and delivered directly to the Customer interface.
+Finally, all relevant data — including query, context, and generated output — is stored in the Query Log Database, enabling future analysis, retraining, and performance monitoring.
+
+
+Figure 8:DFD Level3 Generate AI Response (RAG) 
+
+3.3.5 Class Diagram
+This class diagram captures the object-oriented design of our centralized RAG customer support system. At its heart are three user types—Customer, SupportAgent, and Admin—all inheriting from a base User class to share authentication and profile management. The system's intelligence is driven by the RAGPipeline, which orchestrates the LlamaIndexManager for document processing and the LangChainOrchestrator for response generation. When a Customer creates a SupportTicket, the pipeline retrieves relevant context from Document chunks via the VectorIndex, generates explainable responses, and logs all interactions. SupportAgents handle escalated tickets, while the AnalyticsModule tracks performance through QueryLogs, ensuring measurable improvements in support quality.
+
+Figure 9:Class Diagram
+
+3.3.6 Entity Relationship Diagram (ERD)
+The diagram describes the architecture of the database that will store all the system's information. It focuses on tables, columns, and the crucial links between them to ensure data integrity. The  USERS  table is the core, with specialized tables like  ADMINS and CUSTOMERS linking back to it, effectively creating different user roles. Every critical table, from TICKETS to KNOWLEDGE_BASE. The relationships clearly map the rules of how data connects, providing a clear plan for building a secure and well-structured PostgreSQL database.
+
+
+Figure 10:Entity Relationship Diagram (ERD)
+
+3.3.7 Project Timeline and Budget
+A detailed project plan and budget have been established to guide the development of the proposed system. The project timeline, illustrated in the Gantt chart in Appendix II, is structured over 28 weeks. It systematically sequences all development phases, from initial setup and core backend functionality to AI integration, frontend development, and final system deployment and testing.
+As detailed in Appendix III, the total estimated project cost is KES 48,500. This budget is allocated for a development laptop, Internet and miscellaneous expenses, with significant savings achieved through the use of open-source technologies like FAST API, PostgreSQL, and Hugging Face models, which incur no licensing fees. This ensures the project remains cost-effective while delivering a fully functional prototype.
+
+
+
+
+
+REFERENCES
+Zendesk. (2025). Zendesk Suite pricing. Zendesk, Inc. Retrieved from https://www.zendesk.com/
+International Journal of Science and Research. (2025). Retrieval-augmented generation for AI-powered applications. https://www.ijsr.net/archive/v14i11/SR251104092705.pdf
+LeewayHertz. (2025). Customer service automation: Why businesses need to automate support. https://www.leewayhertz.com/customer-service-automation/? 
+Microsoft Cloud Blog. (2025). 5 key features and benefits of retrieval-augmented generation (RAG). https://www.microsoft.com/en-us/microsoft-cloud/blog/2025/02/13/5-key-features-and-benefits-of-retrieval-augmented-generation-rag/?msockid=3ac41c5a19cd639528fa0a3318df62a0& 
+Multimodal. (2025). Customer support automation: Improving efficiency with AI. https://www.multimodal.dev/customer-support-automation?
+TechTarget. (2023.). Retrieval-augmented generation (RAG). https://www.techtarget.com/searchenterpriseai/definition/retrieval-augmented-generation?utm_source=chatgpt.com
+OpenAI. (2024). *Retrieval-Augmented Generation (RAG) prototype*. OpenAI. https://www.openai.com/research/rag
+Google Cloud. (2022). *Dialogflow documentation*. Google LLC. https://cloud.google.com/dialogflow
+IBM. (2023). *IBM Watson Assistant documentation*. Business Machines Corporation. https://www.ibm.com/products/watson-assistant
+
+
+
+
+
+APPENDICES
+Appendix I: Sample Questionnaire
+
+Title: User Feedback on AI-Powered Customer Support System
+
+This questionnaire will be used to collect information that will guide the design and development of the proposed AI-powered customer support system. The responses will remain confidential and will be used solely for academic purposes.
+Section A: General Information
+Gender: ☐ Male ☐ Female ☐ Prefer not to say
+Age Group: ☐ 18–25 ☐ 26–35 ☐ 36–45 ☐ Above 45
+Occupation: ☐ Student ☐ Customer Support Agent ☐ Developer ☐ Manager ☐ Other
+Section B: System Usage and Experience
+Have you used any customer support system before?
+☐ Yes ☐ No
+(If No, skip to Section C)
+Which system(s) have you used? (e.g., Zendesk, Freshdesk, Intercom)
+How would you rate your satisfaction with existing systems?
+☐ Very Satisfied ☐ Satisfied ☐ Neutral ☐ Dissatisfied ☐ Very Dissatisfied
+What challenges have you faced when using customer support systems?
+☐ Slow response time
+☐ Poor AI accuracy
+☐ Complex interface
+☐ Expensive subscription
+☐ Limited analytics and reporting
+Section C: AI Expectations and Preferences
+Would you prefer a customer support system that uses Artificial Intelligence for automated replies?
+☐ Yes ☐ No ☐ Not sure
+Which AI features would you find most useful?
+☐ Real-time chat response
+☐ Voice assistant integration
+☐ Multi-language support
+☐ Sentiment analysis
+Additional comments or suggestions for improving AI-based customer support systems:.................................................................................................................
+(Open-ended text response)
+
+Appendix II: Gantt Chart (Project Timeline)
+
+Figure 12:Gantt Chart(Project Timeline)
+This Gantt chart outlines the schedule for the project development covering key phases of Development.
+Appendix III: Estimated Project Budget
+Item
+Cost (KES)
+Notes
+Development Laptop (if needed)
+45,000
+Mid-range laptop for coding
+FAST API
+0
+Open-source
+Postgres Database, Qdrant Vector DB
+0
+Free
+VS Code / PyCharm Community
+0
+Free
+Hugging face OpenAI model
+0
+Open-source
+Miscellaneous ; Wi-fi, Documentation Printing Cost
+3,500
+3-month Internet cost and Submission Requirements
+Total
+48,500
+
+
+
+Table 2:Project Budget
