@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings  # noqa: F401
 from app.routers import auth as auth_router
+from app.routers import documents as documents_router
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,7 @@ app.add_middleware(
 
 # ── Routers ───────────────────────────────────────────────────
 app.include_router(auth_router.router)
+app.include_router(documents_router.router)
 
 
 # ── Health check ──────────────────────────────────────────────
