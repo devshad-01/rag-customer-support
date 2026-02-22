@@ -71,4 +71,5 @@ def ingest_document(document_id: int, file_path: str) -> dict:
         "page_count": page_count,
         "chunk_count": len(chunks),
         "point_ids": point_ids,
+        "chunks": chunk_dicts,
     }

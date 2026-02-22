@@ -75,11 +75,12 @@ async def upload_and_ingest(db: Session, file: UploadFile, user_id: int) -> Docu
 
         # Save chunks to DB
         for i, point_id in enumerate(result["point_ids"]):
+            chunk_data = result["chunks"][i]
             chunk = DocumentChunk(
                 document_id=doc.id,
                 chunk_index=i,
-                chunk_text="",  # text already in Qdrant payload; keep DB row lightweight
-                page_number=None,
+                chunk_text=chunk_data["text"],
+                page_number=chunk_data.get("page_number"),
                 embedding_id=point_id,
             )
             db.add(chunk)
