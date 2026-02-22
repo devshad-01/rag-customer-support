@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings  # noqa: F401
+from app.routers import auth as auth_router
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ── Routers ───────────────────────────────────────────────────
+app.include_router(auth_router.router)
 
 
 # ── Health check ──────────────────────────────────────────────
