@@ -24,6 +24,15 @@ async def lifespan(app: FastAPI):
     try:
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables verified/created")
+
+        # Auto-seed default users (idempotent — skips if they already exist)
+        try:
+            from seed import seed
+            seed()
+            logger.info("Seed users verified/created")
+        except Exception as seed_err:
+            logger.warning(f"Seed skipped: {seed_err}")
+
     except Exception as e:
         logger.error(f"Database connection failed: {e}")
 
