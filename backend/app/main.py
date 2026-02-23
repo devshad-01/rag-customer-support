@@ -17,6 +17,16 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Startup / shutdown events."""
     logger.info("Starting RAG Customer Support API")
+
+    # Auto-create tables if they don't exist (safe for production — won't drop existing)
+    from app.database import engine, Base
+    from app.models import user, document, conversation, ticket, query_log  # noqa: F401
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables verified/created")
+    except Exception as e:
+        logger.error(f"Database connection failed: {e}")
+
     yield
     logger.info("Shutting down RAG Customer Support API")
 

@@ -48,3 +48,4 @@ htmlcov/
 # Project-specific exclusions
 .github/
 PRDS/
+docs/
