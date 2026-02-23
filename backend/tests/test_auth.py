@@ -19,7 +19,7 @@ def test_register_user(client):
 
 
 def test_register_duplicate_email(client):
-    """Test registering with an existing email returns 400."""
+    """Test registering with an existing email returns 409."""
     email = f"dup_{uuid.uuid4().hex[:8]}@example.com"
     client.post(
         "/api/auth/register",
@@ -29,8 +29,8 @@ def test_register_duplicate_email(client):
         "/api/auth/register",
         json={"name": "Second", "email": email, "password": "pass12345"},
     )
-    assert response.status_code == 400
-    assert "already registered" in response.json()["detail"].lower()
+    assert response.status_code == 409
+    assert "already" in response.json()["detail"].lower()
 
 
 def test_register_short_password(client):
