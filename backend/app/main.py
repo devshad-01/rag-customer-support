@@ -3,7 +3,7 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings  # noqa: F401
@@ -29,14 +29,19 @@ app = FastAPI(
 )
 
 # ── CORS — allow React frontend ──────────────────────────────
-cors_origins = [
-    "http://localhost:5173",   # Vite dev server
-    "http://localhost:3000",   # fallback
-]
+# Normalize origins: remove trailing slashes, deduplicate
+dev_origins = {"http://localhost:5173", "http://localhost:3000", "http://localhost:8000"}
+cors_origins_set = set(dev_origins)
+
 if settings.CORS_ORIGINS:
-    cors_origins.extend(
-        [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
-    )
+    env_origins = [
+        o.strip().rstrip("/") for o in settings.CORS_ORIGINS.split(",") 
+        if o.strip()
+    ]
+    cors_origins_set.update(env_origins)
+
+cors_origins = list(cors_origins_set)
+logger.info(f"CORS origins: {cors_origins}")
 
 app.add_middleware(
     CORSMiddleware,
@@ -48,6 +53,17 @@ app.add_middleware(
 
 
 # ── Routers ───────────────────────────────────────────────────
+# Debug endpoint for CORS troubleshooting
+@app.get("/api/debug/cors", tags=["Debug"])
+async def debug_cors(request: Request):
+    """Debug CORS configuration and incoming request headers."""
+    return {
+        "incoming_origin": request.headers.get("origin"),
+        "allowed_origins": cors_origins,
+        "cors_env_var": settings.CORS_ORIGINS,
+        "request_headers": dict(request.headers),
+    }
+
 app.include_router(auth_router.router)
 app.include_router(documents_router.router)
 
