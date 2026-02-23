@@ -2,9 +2,10 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.core.dependencies import require_role
 from app.database import get_db
 from app.models.user import User
@@ -19,20 +20,30 @@ router = APIRouter(prefix="/api/documents", tags=["Documents"])
 @router.post("/", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
 async def upload_document(
     file: UploadFile,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin")),
 ):
-    """Upload a PDF document and run the RAG ingestion pipeline."""
+    """Upload a PDF document. Ingestion runs in the background."""
     try:
-        doc = await document_service.upload_and_ingest(db, file, current_user.id)
+        doc = await document_service.upload_document(db, file, current_user.id)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     except Exception as exc:
         logger.error("Upload failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Document ingestion failed. Check logs for details.",
+            detail="Document upload failed. Check logs for details.",
         )
+
+    # Schedule ingestion as a background task (won't block the response)
+    if not settings.SKIP_INGESTION:
+        background_tasks.add_task(
+            document_service.run_ingestion,
+            doc.id,
+            doc.file_path,
+        )
+
     return _doc_to_response(doc, db)
 
 

@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.models.document import Document, DocumentChunk, DocumentStatus
-from app.rag.ingestion import ingest_document
 from app.rag.vector_store import delete_document_vectors
 
 logger = logging.getLogger(__name__)
@@ -25,16 +24,10 @@ def _upload_dir() -> Path:
     return path
 
 
-async def upload_and_ingest(db: Session, file: UploadFile, user_id: int) -> Document:
-    """Save uploaded PDF, create DB record, run ingestion pipeline.
+async def upload_document(db: Session, file: UploadFile, user_id: int) -> Document:
+    """Save uploaded PDF and create DB record (status=processing).
 
-    Steps:
-        1. Validate file extension
-        2. Save file to disk
-        3. Create Document row (status=processing)
-        4. Run RAG ingestion (parse → chunk → embed → store)
-        5. Save DocumentChunk rows
-        6. Update Document status → indexed
+    This returns immediately — ingestion runs separately via run_ingestion().
     """
     # Validate
     filename = file.filename or "upload.pdf"
@@ -44,7 +37,6 @@ async def upload_and_ingest(db: Session, file: UploadFile, user_id: int) -> Docu
 
     # Save to disk
     upload_path = _upload_dir() / filename
-    # Avoid collisions by appending a counter
     counter = 1
     while upload_path.exists():
         stem = os.path.splitext(filename)[0]
@@ -56,28 +48,49 @@ async def upload_and_ingest(db: Session, file: UploadFile, user_id: int) -> Docu
 
     file_size = upload_path.stat().st_size
 
-    # Create DB record
+    # If ingestion is skipped, mark as indexed immediately (no embeddings)
+    initial_status = DocumentStatus.processing
+    if settings.SKIP_INGESTION:
+        initial_status = DocumentStatus.indexed
+        logger.info("SKIP_INGESTION=true — document will be saved without embedding")
+
     doc = Document(
         title=filename,
         file_path=str(upload_path),
         file_size=file_size,
-        status=DocumentStatus.processing,
+        status=initial_status,
         uploaded_by=user_id,
     )
     db.add(doc)
     db.commit()
     db.refresh(doc)
     logger.info("Document id=%d saved to %s", doc.id, upload_path)
+    return doc
 
-    # Ingest
+
+def run_ingestion(document_id: int, file_path: str) -> None:
+    """Run the RAG ingestion pipeline in a background task.
+
+    Uses its own DB session so it's independent of the request lifecycle.
+    This is safe to crash without affecting the running server.
+    """
+    from app.database import SessionLocal
+    from app.rag.ingestion import ingest_document
+
+    db = SessionLocal()
     try:
-        result = ingest_document(doc.id, str(upload_path))
+        result = ingest_document(document_id, file_path)
+
+        doc = db.query(Document).filter(Document.id == document_id).first()
+        if doc is None:
+            logger.error("Document id=%d not found after ingestion", document_id)
+            return
 
         # Save chunks to DB
         for i, point_id in enumerate(result["point_ids"]):
             chunk_data = result["chunks"][i]
             chunk = DocumentChunk(
-                document_id=doc.id,
+                document_id=document_id,
                 chunk_index=i,
                 chunk_text=chunk_data["text"],
                 page_number=chunk_data.get("page_number"),
@@ -88,16 +101,19 @@ async def upload_and_ingest(db: Session, file: UploadFile, user_id: int) -> Docu
         doc.page_count = result["page_count"]
         doc.status = DocumentStatus.indexed
         db.commit()
-        db.refresh(doc)
-        logger.info("Document id=%d ingested: %d chunks", doc.id, result["chunk_count"])
+        logger.info("Document id=%d ingested: %d chunks", document_id, result["chunk_count"])
 
     except Exception as exc:
-        logger.error("Ingestion failed for document id=%d: %s", doc.id, exc)
-        doc.status = DocumentStatus.failed
-        db.commit()
-        raise
-
-    return doc
+        logger.error("Ingestion failed for document id=%d: %s", document_id, exc)
+        try:
+            doc = db.query(Document).filter(Document.id == document_id).first()
+            if doc:
+                doc.status = DocumentStatus.failed
+                db.commit()
+        except Exception:
+            pass  # DB might be unreachable too
+    finally:
+        db.close()
 
 
 def get_documents(

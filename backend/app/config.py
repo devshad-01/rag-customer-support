@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     # ── File Upload ───────────────────────────────────────────
     UPLOAD_DIR: str = "./uploads"
 
+    # ── Ingestion ─────────────────────────────────────────────
+    SKIP_INGESTION: bool = False  # Set True on Render free tier (not enough RAM)
+
     # ── CORS ──────────────────────────────────────────────────
     CORS_ORIGINS: str = ""  # Comma-separated extra origins (e.g. Vercel URL)
 
