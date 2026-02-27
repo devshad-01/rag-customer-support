@@ -55,6 +55,7 @@ def store_embeddings(
     document_id: int,
     chunks: list[dict],
     embeddings: list[list[float]],
+    source_title: str = "",
     client: QdrantClient | None = None,
 ) -> list[str]:
     """Store chunk embeddings in Qdrant.
@@ -63,6 +64,7 @@ def store_embeddings(
         document_id: DB document id (stored in payload for filtering).
         chunks: List of dicts with 'text', 'index', 'page_number' keys.
         embeddings: Corresponding embedding vectors.
+        source_title: Document title for explainability/source references.
 
     Returns:
         List of Qdrant point IDs (UUID strings).
@@ -84,6 +86,7 @@ def store_embeddings(
                     "chunk_index": chunk["index"],
                     "chunk_text": chunk["text"],
                     "page_number": chunk.get("page_number"),
+                    "source_title": source_title,
                 },
             )
         )
@@ -135,6 +138,7 @@ def search_similar(
             "document_id": hit.payload.get("document_id"),
             "chunk_index": hit.payload.get("chunk_index"),
             "page_number": hit.payload.get("page_number"),
+            "source_title": hit.payload.get("source_title", ""),
         }
         for hit in results
     ]

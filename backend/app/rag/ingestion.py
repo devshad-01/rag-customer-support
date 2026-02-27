@@ -28,7 +28,7 @@ def extract_pages_from_pdf(file_path: str) -> list[dict]:
     return pages
 
 
-def ingest_document(document_id: int, file_path: str) -> dict:
+def ingest_document(document_id: int, file_path: str, source_title: str = "") -> dict:
     """Full ingestion pipeline for a single document.
 
     1. Parse PDF → extract page texts
@@ -59,7 +59,7 @@ def ingest_document(document_id: int, file_path: str) -> dict:
         {"text": c.text, "index": c.index, "page_number": c.page_number}
         for c in chunks
     ]
-    point_ids = store_embeddings(document_id, chunk_dicts, embeddings)
+    point_ids = store_embeddings(document_id, chunk_dicts, embeddings, source_title=source_title)
 
     logger.info(
         "Ingestion complete for document_id=%d: %d pages, %d chunks",

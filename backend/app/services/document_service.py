@@ -79,7 +79,11 @@ def run_ingestion(document_id: int, file_path: str) -> None:
 
     db = SessionLocal()
     try:
-        result = ingest_document(document_id, file_path)
+        # Fetch document title for Qdrant payload (explainability)
+        doc = db.query(Document).filter(Document.id == document_id).first()
+        source_title = doc.title if doc else ""
+
+        result = ingest_document(document_id, file_path, source_title=source_title)
 
         doc = db.query(Document).filter(Document.id == document_id).first()
         if doc is None:
