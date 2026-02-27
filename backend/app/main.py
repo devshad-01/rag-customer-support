@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings  # noqa: F401
 from app.routers import auth as auth_router
 from app.routers import documents as documents_router
+from app.routers import chat as chat_router
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +86,7 @@ async def debug_cors(request: Request):
 
 app.include_router(auth_router.router)
 app.include_router(documents_router.router)
+app.include_router(chat_router.router)
 
 
 # ── Health check ──────────────────────────────────────────────
