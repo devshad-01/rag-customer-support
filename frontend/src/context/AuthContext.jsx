@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { getCurrentUser } from "@/services/authApi";
 
 const AuthContext = createContext(null);
 
@@ -25,14 +26,8 @@ export function AuthProvider({ children }) {
       return;
     }
 
-    // Verify token by fetching current user
-    fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Invalid token");
-        return res.json();
-      })
+    // Verify token using the axios-based API service
+    getCurrentUser()
       .then((data) => setUser(data))
       .catch(() => logout())
       .finally(() => setLoading(false));

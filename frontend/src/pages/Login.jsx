@@ -1,5 +1,8 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { loginUser } from "@/services/authApi";
 import { Button } from "@/components/ui/button";
@@ -16,32 +19,37 @@ import {
 import { MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 
+const loginSchema = z.object({
+  email: z.string().email("Enter a valid email"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
 export default function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const data = await loginUser(email, password);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({ resolver: zodResolver(loginSchema) });
+
+  const mutation = useMutation({
+    mutationFn: ({ email, password }) => loginUser(email, password),
+    onSuccess: (data) => {
       login(data.access_token, data.user);
       toast.success("Logged in successfully");
-
-      // Redirect based on role
       const role = data.user.role;
       if (role === "admin") navigate("/admin");
       else if (role === "agent") navigate("/agent");
       else navigate("/chat");
-    } catch (err) {
+    },
+    onError: (err) => {
       toast.error(err.response?.data?.detail || "Login failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+  });
+
+  const onSubmit = (values) => mutation.mutate(values);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40">
@@ -52,10 +60,10 @@ export default function Login() {
           </div>
           <CardTitle className="text-2xl">Welcome Back</CardTitle>
           <CardDescription>
-            Sign in to RAG Customer Support
+            Sign in to SupportIQ
           </CardDescription>
         </CardHeader>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -63,10 +71,11 @@ export default function Login() {
                 id="email"
                 type="email"
                 placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
+                {...register("email")}
               />
+              {errors.email && (
+                <p className="text-sm text-destructive">{errors.email.message}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
@@ -74,15 +83,16 @@ export default function Login() {
                 id="password"
                 type="password"
                 placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
+                {...register("password")}
               />
+              {errors.password && (
+                <p className="text-sm text-destructive">{errors.password.message}</p>
+              )}
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Signing in..." : "Sign In"}
+            <Button type="submit" className="w-full" disabled={mutation.isPending}>
+              {mutation.isPending ? "Signing in..." : "Sign In"}
             </Button>
             <p className="text-sm text-muted-foreground">
               Don&apos;t have an account?{" "}

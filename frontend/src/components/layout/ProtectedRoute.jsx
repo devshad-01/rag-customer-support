@@ -1,15 +1,12 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { PageSpinner } from "@/components/ui/skeletons";
 
 export default function ProtectedRoute({ children, allowedRoles }) {
   const { user, loading, isAuthenticated } = useAuth();
 
   if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-muted-foreground">Loading...</div>
-      </div>
-    );
+    return <PageSpinner />;
   }
 
   if (!isAuthenticated) {
