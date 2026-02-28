@@ -11,6 +11,7 @@ from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.models.conversation import Conversation, ConversationStatus, Message, SenderRole
 from app.models.query_log import QueryLog
+from app.models.ticket import Ticket
 from app.models.user import User
 from app.rag.pipeline import process_query
 from app.schemas.chat import (
@@ -274,3 +275,52 @@ async def list_conversations(
         items=[_conv_to_response(c, db) for c in convs],
         total=total,
     )
+
+
+def _delete_conversation(conv: Conversation, db: Session) -> None:
+    """Delete a conversation and clean up FK references."""
+    # Nullify query_log FK (preserve analytics rows)
+    db.query(QueryLog).filter(QueryLog.conversation_id == conv.id).update(
+        {QueryLog.conversation_id: None}, synchronize_session=False
+    )
+    # Delete tickets tied to this conversation
+    db.query(Ticket).filter(Ticket.conversation_id == conv.id).delete(
+        synchronize_session=False
+    )
+    # Messages cascade-delete via ORM relationship
+    db.delete(conv)
+
+
+@router.delete("/{conversation_id}", status_code=204)
+async def delete_conversation(
+    conversation_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a single conversation."""
+    conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    if conv.customer_id != current_user.id and current_user.role.value not in ("admin",):
+        raise HTTPException(status_code=403, detail="Not your conversation")
+
+    _delete_conversation(conv, db)
+    db.commit()
+    logger.info("Deleted conversation id=%d by user=%d", conversation_id, current_user.id)
+
+
+@router.delete("/", status_code=204)
+async def clear_all_conversations(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete all conversations for the current customer."""
+    convs = (
+        db.query(Conversation)
+        .filter(Conversation.customer_id == current_user.id)
+        .all()
+    )
+    for conv in convs:
+        _delete_conversation(conv, db)
+    db.commit()
+    logger.info("Cleared %d conversations for user=%d", len(convs), current_user.id)
