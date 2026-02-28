@@ -6,6 +6,7 @@ import Landing from "@/pages/Landing";
 import Chat from "@/pages/customer/Chat";
 import AgentDashboard from "@/pages/agent/Dashboard";
 import TicketDetail from "@/pages/agent/TicketDetail";
+import TicketView from "@/pages/agent/TicketView";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import Documents from "@/pages/admin/Documents";
 import Analytics from "@/pages/admin/Analytics";
@@ -58,6 +59,14 @@ export default function App() {
           element={
             <ProtectedRoute allowedRoles={["agent"]}>
               <TicketDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/agent/tickets/:ticketId"
+          element={
+            <ProtectedRoute allowedRoles={["agent"]}>
+              <TicketView />
             </ProtectedRoute>
           }
         />
