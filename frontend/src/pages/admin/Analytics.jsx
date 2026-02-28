@@ -35,6 +35,10 @@ import {
   Users,
   CalendarDays,
   RefreshCw,
+  Download,
+  FileText,
+  FileSpreadsheet,
+  Loader2,
 } from "lucide-react";
 import {
   LineChart,
@@ -61,6 +65,12 @@ import {
   getAgentPerformance,
   getTopQueries,
 } from "@/services/analyticsApi";
+import { toast } from "sonner";
+import {
+  downloadBlob,
+  getAnalyticsPDF,
+  getAnalyticsSummaryCSV,
+} from "@/services/reportApi";
 
 const PIE_COLORS = ["#22c55e", "#eab308", "#ef4444"];
 
@@ -102,6 +112,29 @@ export default function Analytics() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [interval, setInterval] = useState("day");
+  const [exporting, setExporting] = useState(null); // "csv" | "pdf"
+
+  const handleExport = async (format) => {
+    setExporting(format);
+    try {
+      const params = {};
+      if (startDate) params.start_date = startDate;
+      if (endDate) params.end_date = endDate;
+
+      if (format === "pdf") {
+        const blob = await getAnalyticsPDF(params);
+        downloadBlob(blob, "analytics_report.pdf");
+      } else {
+        const blob = await getAnalyticsSummaryCSV(params);
+        downloadBlob(blob, "analytics_summary.csv");
+      }
+      toast.success(`${format.toUpperCase()} exported successfully`);
+    } catch {
+      toast.error("Export failed — please try again");
+    } finally {
+      setExporting(null);
+    }
+  };
 
   const dateParams = useMemo(() => {
     const p = {};
@@ -233,6 +266,34 @@ export default function Analytics() {
               Clear
             </Button>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs"
+            disabled={exporting !== null}
+            onClick={() => handleExport("csv")}
+          >
+            {exporting === "csv" ? (
+              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            ) : (
+              <FileSpreadsheet className="h-3 w-3 mr-1" />
+            )}
+            Export CSV
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs"
+            disabled={exporting !== null}
+            onClick={() => handleExport("pdf")}
+          >
+            {exporting === "pdf" ? (
+              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            ) : (
+              <FileText className="h-3 w-3 mr-1" />
+            )}
+            Export PDF
+          </Button>
         </div>
       </div>
 
