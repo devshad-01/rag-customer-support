@@ -326,6 +326,79 @@ async def delete_conversation(
     logger.info("Deleted conversation id=%d by user=%d", conversation_id, current_user.id)
 
 
+@router.post("/{conversation_id}/escalate", response_model=EscalationResponse)
+async def escalate_conversation(
+    conversation_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Manually escalate a conversation to a human agent."""
+    conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    if conv.customer_id != current_user.id and current_user.role.value not in ("admin",):
+        raise HTTPException(status_code=403, detail="Not your conversation")
+    if conv.status == ConversationStatus.closed:
+        raise HTTPException(status_code=400, detail="This conversation is closed")
+
+    ticket = ticket_service.create_ticket(
+        db,
+        conversation_id=conversation_id,
+        customer_id=current_user.id,
+        reason="Customer requested human agent",
+    )
+
+    # Add a system-style message so the customer sees it in chat
+    system_msg = Message(
+        conversation_id=conversation_id,
+        sender_role=SenderRole.ai,
+        content=(
+            "Your conversation has been escalated to a human support agent. "
+            "An agent will review your conversation and respond shortly. "
+            "You can continue chatting here and the agent will see your messages."
+        ),
+    )
+    db.add(system_msg)
+    db.commit()
+    db.refresh(ticket)
+
+    from app.schemas.ticket import TicketResponse
+    from app.models.user import UserRole as _UR  # avoid shadowing
+
+    # Build ticket response
+    customer = db.query(User).filter(User.id == ticket.customer_id).first()
+    agent_name = None
+    if ticket.assigned_agent_id:
+        agent = db.query(User).filter(User.id == ticket.assigned_agent_id).first()
+        agent_name = agent.name if agent else None
+    msg_count = (
+        db.query(func.count(Message.id))
+        .filter(Message.conversation_id == conversation_id)
+        .scalar()
+    ) or 0
+
+    ticket_resp = TicketResponse(
+        id=ticket.id,
+        conversation_id=ticket.conversation_id,
+        customer_id=ticket.customer_id,
+        assigned_agent_id=ticket.assigned_agent_id,
+        status=ticket.status.value,
+        priority=ticket.priority.value,
+        reason=ticket.reason,
+        created_at=ticket.created_at,
+        resolved_at=ticket.resolved_at,
+        updated_at=ticket.updated_at,
+        customer_name=customer.name if customer else None,
+        agent_name=agent_name,
+        conversation_title=conv.title,
+        message_count=msg_count,
+    )
+    return EscalationResponse(
+        ticket=ticket_resp,
+        message="Conversation escalated to a human agent.",
+    )
+
+
 @router.delete("/", status_code=204)
 async def clear_all_conversations(
     db: Session = Depends(get_db),

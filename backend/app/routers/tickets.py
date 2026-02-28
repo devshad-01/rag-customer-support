@@ -31,13 +31,13 @@ def _ticket_to_response(ticket: Ticket, db: Session) -> TicketResponse:
     """Enrich a Ticket ORM object with computed fields."""
     # Customer name
     customer = db.query(User).filter(User.id == ticket.customer_id).first()
-    customer_name = customer.full_name if customer else None
+    customer_name = customer.name if customer else None
 
     # Agent name
     agent_name = None
     if ticket.assigned_agent_id:
         agent = db.query(User).filter(User.id == ticket.assigned_agent_id).first()
-        agent_name = agent.full_name if agent else None
+        agent_name = agent.name if agent else None
 
     # Conversation info
     conv = db.query(Conversation).filter(Conversation.id == ticket.conversation_id).first()
