@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+gitimport { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import {
   Card,
