@@ -23,3 +23,15 @@ export async function deleteDocument(id) {
   const { data } = await api.delete(`/documents/${id}`);
   return data;
 }
+
+// ── Source verification (Week 5) ─────────────────────────────
+
+export async function getChunkWithContext(documentId, chunkIndex) {
+  const { data } = await api.get(`/documents/${documentId}/chunks/${chunkIndex}`);
+  return data;
+}
+
+export async function getDocumentPreview(documentId, limit = 10) {
+  const { data } = await api.get(`/documents/${documentId}/preview`, { params: { limit } });
+  return data;
+}

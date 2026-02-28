@@ -29,6 +29,10 @@ const adminLinks = [
 export default function Sidebar() {
   const { user } = useAuth();
 
+  // Customers only have one link (Chat) — the chat page has its own sidebar,
+  // so we hide the app sidebar entirely to avoid a double-sidebar layout.
+  if (user?.role === "customer") return null;
+
   const links =
     user?.role === "admin"
       ? adminLinks

@@ -3,8 +3,6 @@ import { useAuth } from "@/context/AuthContext";
 import AppLayout from "@/components/layout/AppLayout";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import Landing from "@/pages/Landing";
-import Login from "@/pages/Login";
-import Register from "@/pages/Register";
 import Chat from "@/pages/customer/Chat";
 import AgentDashboard from "@/pages/agent/Dashboard";
 import TicketDetail from "@/pages/agent/TicketDetail";
@@ -32,9 +30,9 @@ function RoleRedirect() {
 export default function App() {
   return (
     <Routes>
-      {/* Public routes */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      {/* Public — Landing page handles both sign-in & register via tabs */}
+      <Route path="/login" element={<Landing />} />
+      <Route path="/register" element={<Landing />} />
 
       {/* Protected routes with layout */}
       <Route
