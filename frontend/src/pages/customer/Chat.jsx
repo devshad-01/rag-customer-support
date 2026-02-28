@@ -237,11 +237,11 @@ function ChatBubble({ message, onViewDocument }) {
       <div
         className={cn(
           "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
-          isUser ? "bg-foreground" : isAgent ? "bg-orange-500" : "bg-muted"
+          isUser ? "bg-neutral-800 dark:bg-neutral-600" : isAgent ? "bg-orange-500" : "bg-muted"
         )}
       >
         {isUser ? (
-          <User className="h-4 w-4 text-background" />
+          <User className="h-4 w-4 text-white" />
         ) : (
           <Bot className={cn("h-4 w-4", isAgent ? "text-white" : "text-muted-foreground")} />
         )}
@@ -251,7 +251,7 @@ function ChatBubble({ message, onViewDocument }) {
           className={cn(
             "rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
             isUser
-              ? "rounded-tr-sm bg-foreground text-background"
+              ? "rounded-tr-sm bg-neutral-800 text-neutral-50 dark:bg-neutral-600 dark:text-neutral-100"
               : "rounded-tl-sm bg-muted"
           )}
         >
@@ -346,7 +346,7 @@ function ConversationItem({ conv, isActive, onClick }) {
       className={cn(
         "w-full rounded-lg px-3 py-2.5 text-left text-sm transition",
         isActive
-          ? "bg-foreground text-background"
+          ? "bg-neutral-800 text-neutral-50 dark:bg-neutral-600 dark:text-neutral-100"
           : "hover:bg-muted text-muted-foreground hover:text-foreground"
       )}
     >
@@ -547,8 +547,8 @@ export default function Chat() {
         {/* ── User footer (fixed at bottom) ── */}
         <div className="border-t px-3 py-2.5">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-foreground">
-              <User className="h-4 w-4 text-background" />
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neutral-800 dark:bg-neutral-600">
+              <User className="h-4 w-4 text-white" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="truncate text-sm font-medium leading-tight">{user?.name}</p>

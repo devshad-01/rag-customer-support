@@ -99,7 +99,6 @@ function SignInForm() {
     mutationFn: ({ email, password }) => loginUser(email, password),
     onSuccess: (data) => {
       login(data.access_token, data.user);
-      toast.success("Welcome back!");
       const role = data.user.role;
       navigate(
         role === "admin" ? "/admin" : role === "agent" ? "/agent" : "/chat"
@@ -165,7 +164,6 @@ function RegisterForm({ onSuccess }) {
     mutationFn: ({ name, email, password, role }) =>
       registerUser(name, email, password, role),
     onSuccess: () => {
-      toast.success("Account created! Sign in to continue.");
       onSuccess?.();
     },
     onError: (err) =>
