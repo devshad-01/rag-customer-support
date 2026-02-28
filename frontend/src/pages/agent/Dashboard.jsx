@@ -60,7 +60,7 @@ export default function AgentDashboard() {
     .slice(0, 5);
 
   return (
-    <div>
+    <div className="p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Agent Dashboard</h1>
         <p className="text-muted-foreground">

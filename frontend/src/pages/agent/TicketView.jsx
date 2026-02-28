@@ -13,9 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   ArrowLeft,
   Send,
@@ -36,20 +34,6 @@ const PRIORITY_VARIANT = {
   medium: "default",
   low: "secondary",
 };
-
-const STATUS_VARIANT = {
-  open: "destructive",
-  in_progress: "default",
-  resolved: "secondary",
-  closed: "outline",
-};
-
-function formatStatus(s) {
-  return s
-    .split("_")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-}
 
 function formatDate(dateStr) {
   if (!dateStr) return "—";
@@ -75,42 +59,48 @@ function MessageBubble({ msg }) {
   const isCustomer = msg.sender_role === "customer";
   const isAgent = msg.sender_role === "agent";
 
-  let avatarBg, avatarIcon;
-  if (isCustomer) {
-    avatarBg = "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300";
-    avatarIcon = <User className="h-4 w-4" />;
-  } else if (isAgent) {
-    avatarBg =
-      "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300";
-    avatarIcon = <Headset className="h-4 w-4" />;
-  } else {
-    avatarBg =
-      "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300";
-    avatarIcon = <Bot className="h-4 w-4" />;
-  }
-
   return (
     <div
       className={cn("flex items-start gap-3", isAgent && "flex-row-reverse")}
     >
-      <Avatar className={`h-8 w-8 shrink-0 ${avatarBg}`}>
-        <AvatarFallback className={avatarBg}>{avatarIcon}</AvatarFallback>
-      </Avatar>
+      <div
+        className={cn(
+          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+          isCustomer
+            ? "bg-neutral-800 dark:bg-neutral-600"
+            : isAgent
+              ? "bg-orange-500 dark:bg-orange-600"
+              : "bg-muted"
+        )}
+      >
+        {isCustomer ? (
+          <User className="h-4 w-4 text-white" />
+        ) : isAgent ? (
+          <Headset className="h-4 w-4 text-white" />
+        ) : (
+          <Bot className="h-4 w-4 text-muted-foreground" />
+        )}
+      </div>
       <div
         className={cn(
           "flex max-w-[75%] flex-col gap-1",
           isAgent && "items-end"
         )}
       >
+        {isAgent && (
+          <span className="text-[10px] font-medium text-orange-600 dark:text-orange-400">
+            You
+          </span>
+        )}
         <div
           className={cn(
             "rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap",
-            isCustomer && "rounded-tl-sm bg-muted",
+            isCustomer && "rounded-tl-sm bg-neutral-800 text-neutral-50 dark:bg-neutral-600 dark:text-neutral-100",
             isAgent &&
-              "rounded-tr-sm bg-orange-500 text-white dark:bg-orange-600",
+              "rounded-tr-sm border border-orange-200 bg-orange-50 text-orange-900 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-100",
             !isCustomer &&
               !isAgent &&
-              "rounded-tl-sm bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100"
+              "rounded-tl-sm bg-muted"
           )}
         >
           {msg.content}
@@ -123,51 +113,61 @@ function MessageBubble({ msg }) {
   );
 }
 
-// ── Compact ticket info bar ──────────────────────────────────
+// ── Combined header bar ──────────────────────────────────────
 
-function TicketInfoBar({
+function TicketHeader({
   ticket,
   expanded,
   onToggle,
   onStatusChange,
   statusPending,
+  onBack,
 }) {
   return (
-    <div className="border-b bg-muted/30">
-      {/* Collapsed: single row */}
-      <div className="flex items-center gap-3 px-4 py-2">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <span className="text-sm font-semibold shrink-0">#{ticket.id}</span>
-          <Separator orientation="vertical" className="h-4" />
-          <span className="text-sm truncate text-muted-foreground">
-            {ticket.customer_name || "Customer"}
-          </span>
-          <Separator orientation="vertical" className="h-4" />
-          <Badge
-            variant={PRIORITY_VARIANT[ticket.priority] || "secondary"}
-            className="text-[10px] px-1.5 py-0 h-5"
-          >
-            {ticket.priority}
-          </Badge>
-          <Select
-            value={ticket.status}
-            onValueChange={onStatusChange}
-            disabled={statusPending}
-          >
-            <SelectTrigger className="h-7 w-[120px] text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="open">Open</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="resolved">Resolved</SelectItem>
-              <SelectItem value="closed">Closed</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+    <div className="border-b bg-muted/30 dark:bg-muted/10">
+      {/* Primary row: back button + title + metadata + details toggle */}
+      <div className="flex items-center gap-2 px-4 py-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0"
+          onClick={onBack}
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <h1 className="text-sm font-semibold truncate min-w-0">
+          {ticket.conversation_title || "Escalated conversation"}
+        </h1>
+        <span className="text-xs font-mono text-muted-foreground shrink-0">
+          #{ticket.id}
+        </span>
+        <span className="text-xs text-muted-foreground truncate hidden sm:inline">
+          {ticket.customer_name || "Customer"}
+        </span>
+        <Badge
+          variant={PRIORITY_VARIANT[ticket.priority] || "secondary"}
+          className="text-[10px] px-1.5 py-0 h-5 shrink-0"
+        >
+          {ticket.priority}
+        </Badge>
+        <Select
+          value={ticket.status}
+          onValueChange={onStatusChange}
+          disabled={statusPending}
+        >
+          <SelectTrigger className="h-7 w-[120px] text-xs shrink-0">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="open">Open</SelectItem>
+            <SelectItem value="in_progress">In Progress</SelectItem>
+            <SelectItem value="resolved">Resolved</SelectItem>
+            <SelectItem value="closed">Closed</SelectItem>
+          </SelectContent>
+        </Select>
         <button
           onClick={onToggle}
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition"
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition shrink-0 ml-auto"
         >
           {expanded ? (
             <>
@@ -183,14 +183,10 @@ function TicketInfoBar({
 
       {/* Expanded: extra details */}
       {expanded && (
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 px-4 pb-2 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 px-4 pb-2.5 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
             {formatDate(ticket.created_at)}
-          </span>
-          <span>
-            <strong className="text-foreground">Conversation:</strong>{" "}
-            {ticket.conversation_title || "Untitled"}
           </span>
           {ticket.reason && (
             <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
@@ -320,35 +316,15 @@ export default function TicketView() {
   const isClosed = ticket.status === "closed" || ticket.status === "resolved";
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col">
-      {/* Top bar: back + ticket info */}
-      <div className="flex items-center gap-2 border-b px-4 py-2 bg-background">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 shrink-0"
-          onClick={() => navigate("/agent/tickets")}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <h1 className="text-sm font-semibold truncate flex-1">
-          {ticket.conversation_title || "Escalated conversation"}
-        </h1>
-        <Badge
-          variant={STATUS_VARIANT[ticket.status] || "secondary"}
-          className="shrink-0"
-        >
-          {formatStatus(ticket.status)}
-        </Badge>
-      </div>
-
-      {/* Compact ticket metadata */}
-      <TicketInfoBar
+    <div className="flex h-full flex-col">
+      {/* Combined header */}
+      <TicketHeader
         ticket={ticket}
         expanded={infoExpanded}
         onToggle={() => setInfoExpanded(!infoExpanded)}
         onStatusChange={(val) => statusMutation.mutate(val)}
         statusPending={statusMutation.isPending}
+        onBack={() => navigate("/agent/tickets")}
       />
 
       {/* Messages area */}
@@ -374,14 +350,14 @@ export default function TicketView() {
 
       {/* Input bar (or closed banner) */}
       {isClosed ? (
-        <div className="border-t px-4 py-3 text-center text-sm text-muted-foreground bg-muted/30">
+        <div className="border-t px-4 py-3 text-center text-sm text-muted-foreground bg-muted/30 dark:bg-muted/10">
           This ticket is {ticket.status}. No further responses can be sent.
         </div>
       ) : (
-        <div className="border-t px-4 py-3 bg-background">
+        <div className="px-4 pb-4 pt-2 bg-background">
           <form
             onSubmit={handleSend}
-            className="mx-auto flex max-w-3xl items-center gap-2"
+            className="mx-auto flex max-w-3xl items-center gap-2 rounded-2xl border bg-muted/30 px-3 py-2 shadow-sm transition-colors focus-within:bg-muted/50 focus-within:ring-1 focus-within:ring-ring"
           >
             <Input
               placeholder="Type your response..."
@@ -389,12 +365,12 @@ export default function TicketView() {
               onChange={(e) => setResponse(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={respondMutation.isPending}
-              className="flex-1"
+              className="flex-1 border-0 bg-transparent shadow-none focus-visible:ring-0"
             />
             <Button
               type="submit"
               size="icon"
-              className="h-9 w-9 shrink-0"
+              className="h-8 w-8 rounded-xl shrink-0"
               disabled={!response.trim() || respondMutation.isPending}
             >
               {respondMutation.isPending ? (
