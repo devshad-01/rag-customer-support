@@ -26,6 +26,24 @@ class SourceReference(BaseModel):
     chunk_text: str = ""
     score: float = 0.0
     document_id: int | None = None
+    chunk_id: str = ""
+    rank: int = 0
+    is_primary: bool = False
+
+
+class HighlightMapping(BaseModel):
+    """Maps a response segment to its source chunk."""
+    chunk_id: str = ""
+    document_id: int | None = None
+    matched_phrases: list[str] = []
+    overlap_score: float = 0.0
+
+
+class EvidenceInfo(BaseModel):
+    """Evidence sufficiency assessment."""
+    has_sufficient_evidence: bool
+    evidence_quality: str  # "strong" | "moderate" | "weak" | "none"
+    disclaimer: str | None = None
 
 
 class ConfidenceInfo(BaseModel):
@@ -45,6 +63,8 @@ class MessageResponse(BaseModel):
     content: str
     sources: list[SourceReference] = []
     confidence: ConfidenceInfo | None = None
+    evidence: EvidenceInfo | None = None
+    highlights: list[HighlightMapping] = []
     created_at: datetime
 
 
@@ -53,6 +73,9 @@ class ChatResponse(BaseModel):
     message: MessageResponse
     sources: list[SourceReference] = []
     confidence: ConfidenceInfo | None = None
+    evidence: EvidenceInfo | None = None
+    highlights: list[HighlightMapping] = []
+    total_sources_found: int = 0
 
 
 class ConversationResponse(BaseModel):

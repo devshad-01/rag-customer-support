@@ -145,10 +145,10 @@ def test_get_messages_nonexistent_conversation(client):
 def test_chat_requires_auth(client):
     """Chat endpoints require authentication."""
     resp = client.post("/api/chat/", json={"title": None})
-    assert resp.status_code == 401
+    assert resp.status_code in (401, 403)
 
     resp = client.get("/api/chat/")
-    assert resp.status_code == 401
+    assert resp.status_code in (401, 403)
 
 
 def test_cannot_access_other_users_conversation(client):

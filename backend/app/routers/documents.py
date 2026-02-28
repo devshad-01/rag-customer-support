@@ -1,4 +1,4 @@
-"""Documents router — upload, list, get, delete (admin only)."""
+"""Documents router — upload, list, get, delete (admin only) + source verification."""
 
 import logging
 
@@ -6,10 +6,18 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFi
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.core.dependencies import require_role
+from app.core.dependencies import get_current_user, require_role
 from app.database import get_db
+from app.models.document import Document, DocumentChunk
 from app.models.user import User
-from app.schemas.document import DocumentDeleteResponse, DocumentListResponse, DocumentResponse
+from app.schemas.document import (
+    ChunkResponse,
+    ChunkWithContext,
+    DocumentDeleteResponse,
+    DocumentListResponse,
+    DocumentPreview,
+    DocumentResponse,
+)
 from app.services import document_service
 
 logger = logging.getLogger(__name__)
@@ -109,4 +117,96 @@ def _doc_to_response(doc, db) -> DocumentResponse:
         created_at=doc.created_at,
         updated_at=doc.updated_at,
         chunk_count=chunk_count,
+    )
+
+
+# ── Source verification endpoints (Week 5 — Explainability) ──
+
+
+@router.get("/{document_id}/chunks/{chunk_index}", response_model=ChunkWithContext)
+async def get_chunk_with_context(
+    document_id: int,
+    chunk_index: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get a specific chunk with surrounding context for source verification.
+
+    Accessible by all authenticated users so customers can verify AI sources.
+    """
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    chunk = (
+        db.query(DocumentChunk)
+        .filter(
+            DocumentChunk.document_id == document_id,
+            DocumentChunk.chunk_index == chunk_index,
+        )
+        .first()
+    )
+    if not chunk:
+        raise HTTPException(status_code=404, detail="Chunk not found")
+
+    # Get surrounding chunks for context
+    prev_chunk = (
+        db.query(DocumentChunk)
+        .filter(
+            DocumentChunk.document_id == document_id,
+            DocumentChunk.chunk_index == chunk_index - 1,
+        )
+        .first()
+    )
+    next_chunk = (
+        db.query(DocumentChunk)
+        .filter(
+            DocumentChunk.document_id == document_id,
+            DocumentChunk.chunk_index == chunk_index + 1,
+        )
+        .first()
+    )
+
+    return ChunkWithContext(
+        chunk=ChunkResponse.model_validate(chunk),
+        document_title=doc.title,
+        previous_chunk=ChunkResponse.model_validate(prev_chunk) if prev_chunk else None,
+        next_chunk=ChunkResponse.model_validate(next_chunk) if next_chunk else None,
+    )
+
+
+@router.get("/{document_id}/preview", response_model=DocumentPreview)
+async def preview_document(
+    document_id: int,
+    limit: int = 10,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Preview a document with its metadata and first few chunks.
+
+    Accessible by all authenticated users for source verification.
+    """
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    total_chunks = db.query(DocumentChunk).filter(DocumentChunk.document_id == document_id).count()
+
+    chunks = (
+        db.query(DocumentChunk)
+        .filter(DocumentChunk.document_id == document_id)
+        .order_by(DocumentChunk.chunk_index.asc())
+        .limit(limit)
+        .all()
+    )
+
+    return DocumentPreview(
+        id=doc.id,
+        title=doc.title,
+        file_size=doc.file_size,
+        page_count=doc.page_count,
+        status=doc.status.value,
+        chunk_count=total_chunks,
+        created_at=doc.created_at,
+        chunks=[ChunkResponse.model_validate(c) for c in chunks],
     )

@@ -36,3 +36,40 @@ class DocumentDeleteResponse(BaseModel):
 
     detail: str
     document_id: int
+
+
+# ── Source verification schemas (Week 5) ──────────────────────
+
+class ChunkResponse(BaseModel):
+    """A single document chunk with context."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    document_id: int
+    chunk_index: int
+    chunk_text: str
+    page_number: int | None = None
+    embedding_id: str | None = None
+
+
+class ChunkWithContext(BaseModel):
+    """A chunk with its surrounding context chunks."""
+
+    chunk: ChunkResponse
+    document_title: str
+    previous_chunk: ChunkResponse | None = None
+    next_chunk: ChunkResponse | None = None
+
+
+class DocumentPreview(BaseModel):
+    """Document metadata with first few chunks for preview."""
+
+    id: int
+    title: str
+    file_size: int | None = None
+    page_count: int | None = None
+    status: str
+    chunk_count: int = 0
+    created_at: datetime
+    chunks: list[ChunkResponse] = []

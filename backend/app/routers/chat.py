@@ -19,6 +19,8 @@ from app.schemas.chat import (
     ConversationCreate,
     ConversationListResponse,
     ConversationResponse,
+    EvidenceInfo,
+    HighlightMapping,
     MessageCreate,
     MessageResponse,
     SourceReference,
@@ -35,6 +37,8 @@ def _msg_to_response(msg: Message) -> MessageResponse:
     """Convert a Message ORM object to a MessageResponse schema."""
     sources: list[SourceReference] = []
     confidence: ConfidenceInfo | None = None
+    evidence: EvidenceInfo | None = None
+    highlights: list[HighlightMapping] = []
 
     if msg.sources_json:
         try:
@@ -43,6 +47,10 @@ def _msg_to_response(msg: Message) -> MessageResponse:
                 sources = [SourceReference(**s) for s in raw.get("sources", [])]
                 if "confidence" in raw:
                     confidence = ConfidenceInfo(**raw["confidence"])
+                if "evidence" in raw:
+                    evidence = EvidenceInfo(**raw["evidence"])
+                if "highlights" in raw:
+                    highlights = [HighlightMapping(**h) for h in raw["highlights"]]
             elif isinstance(raw, list):
                 sources = [SourceReference(**s) for s in raw]
         except (json.JSONDecodeError, Exception):
@@ -55,6 +63,8 @@ def _msg_to_response(msg: Message) -> MessageResponse:
         content=msg.content,
         sources=sources,
         confidence=confidence,
+        evidence=evidence,
+        highlights=highlights,
         created_at=msg.created_at,
     )
 
@@ -139,10 +149,12 @@ async def send_message(
     # Run RAG pipeline
     result = await process_query(body.content)
 
-    # Prepare sources + confidence JSON to store with AI message
+    # Prepare sources + confidence + evidence JSON to store with AI message
     metadata = {
         "sources": result["sources"],
         "confidence": result["confidence"],
+        "evidence": result["evidence"],
+        "highlights": result["highlights"],
     }
 
     # Save AI message
@@ -180,11 +192,16 @@ async def send_message(
     # Build response
     sources = [SourceReference(**s) for s in result["sources"]]
     confidence = ConfidenceInfo(**result["confidence"])
+    evidence = EvidenceInfo(**result["evidence"])
+    highlights = [HighlightMapping(**h) for h in result["highlights"]]
 
     return ChatResponse(
         message=_msg_to_response(ai_msg),
         sources=sources,
         confidence=confidence,
+        evidence=evidence,
+        highlights=highlights,
+        total_sources_found=result["total_sources_found"],
     )
 
 

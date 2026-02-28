@@ -134,6 +134,7 @@ def search_similar(
     return [
         {
             "score": hit.score,
+            "chunk_id": str(hit.id),
             "chunk_text": hit.payload.get("chunk_text", ""),
             "document_id": hit.payload.get("document_id"),
             "chunk_index": hit.payload.get("chunk_index"),
