@@ -18,7 +18,6 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import {
-  MessageSquare,
   LogOut,
   Menu,
   FileText,
@@ -26,7 +25,11 @@ import {
   Ticket,
   LayoutDashboard,
   Download,
+  MessageSquare,
 } from "lucide-react";
+import { SupportIQWordmark, SupportIQIcon } from "@/components/SupportIQLogo";
+import { useTheme } from "@/context/ThemeContext";
+import { Moon, Sun } from "lucide-react";
 
 const customerLinks = [
   { to: "/chat", icon: MessageSquare, label: "Chat" },
@@ -44,6 +47,7 @@ const adminLinks = [
 
 export default function Navbar() {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -81,12 +85,20 @@ export default function Navbar() {
           <span className="sr-only">Open menu</span>
         </Button>
 
-        <Link to="/" className="flex items-center gap-2 font-semibold">
-          <MessageSquare className="h-5 w-5 text-primary" />
-          <span>SupportIQ</span>
+        <Link to="/" className="flex items-center">
+          <SupportIQWordmark />
         </Link>
 
         <div className="ml-auto flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={toggleTheme}
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </Button>
           {user && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -123,9 +135,8 @@ export default function Navbar() {
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent side="left" className="w-64 p-0">
           <SheetHeader className="border-b px-4 py-3">
-            <SheetTitle className="flex items-center gap-2 text-base">
-              <MessageSquare className="h-4 w-4 text-primary" />
-              SupportIQ
+            <SheetTitle>
+              <SupportIQWordmark className="text-base" iconClassName="h-4 w-4" />
             </SheetTitle>
           </SheetHeader>
           <nav className="flex flex-col gap-1 p-4">

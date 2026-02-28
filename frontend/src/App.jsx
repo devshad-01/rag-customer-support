@@ -12,19 +12,11 @@ import Analytics from "@/pages/admin/Analytics";
 import Reports from "@/pages/admin/Reports";
 
 function RoleRedirect() {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
 
   if (loading) return null;
-  if (!user) return <Landing />;
-
-  switch (user.role) {
-    case "admin":
-      return <Navigate to="/admin" replace />;
-    case "agent":
-      return <Navigate to="/agent" replace />;
-    default:
-      return <Navigate to="/chat" replace />;
-  }
+  // Always show Landing — it handles logged-in vs logged-out state internally
+  return <Landing />;
 }
 
 export default function App() {

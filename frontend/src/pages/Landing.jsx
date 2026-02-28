@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -30,8 +30,13 @@ import {
   ShieldCheck,
   BarChart3,
   Zap,
+  ArrowRight,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { toast } from "sonner";
+import { SupportIQIcon, SupportIQWordmark } from "@/components/SupportIQLogo";
+import { useTheme } from "@/context/ThemeContext";
 
 // ── Zod schemas ──────────────────────────────────────────────
 
@@ -96,23 +101,42 @@ function SignInForm() {
       login(data.access_token, data.user);
       toast.success("Welcome back!");
       const role = data.user.role;
-      navigate(role === "admin" ? "/admin" : role === "agent" ? "/agent" : "/chat");
+      navigate(
+        role === "admin" ? "/admin" : role === "agent" ? "/agent" : "/chat"
+      );
     },
     onError: (err) =>
       toast.error(err.response?.data?.detail || "Login failed"),
   });
 
   return (
-    <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="space-y-4">
+    <form
+      onSubmit={handleSubmit((v) => mutation.mutate(v))}
+      className="space-y-4"
+    >
       <div className="space-y-2">
         <Label htmlFor="login-email">Email</Label>
-        <Input id="login-email" type="email" placeholder="you@example.com" {...register("email")} />
-        {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+        <Input
+          id="login-email"
+          type="email"
+          placeholder="you@example.com"
+          {...register("email")}
+        />
+        {errors.email && (
+          <p className="text-sm text-destructive">{errors.email.message}</p>
+        )}
       </div>
       <div className="space-y-2">
         <Label htmlFor="login-password">Password</Label>
-        <Input id="login-password" type="password" placeholder="••••••••" {...register("password")} />
-        {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+        <Input
+          id="login-password"
+          type="password"
+          placeholder="••••••••"
+          {...register("password")}
+        />
+        {errors.password && (
+          <p className="text-sm text-destructive">{errors.password.message}</p>
+        )}
       </div>
       <Button type="submit" className="w-full" disabled={mutation.isPending}>
         {mutation.isPending ? "Signing in…" : "Sign In"}
@@ -130,12 +154,16 @@ function RegisterForm({ onSuccess }) {
     setValue,
     watch,
     formState: { errors },
-  } = useForm({ resolver: zodResolver(registerSchema), defaultValues: { role: "customer" } });
+  } = useForm({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { role: "customer" },
+  });
 
   const selectedRole = watch("role");
 
   const mutation = useMutation({
-    mutationFn: ({ name, email, password, role }) => registerUser(name, email, password, role),
+    mutationFn: ({ name, email, password, role }) =>
+      registerUser(name, email, password, role),
     onSuccess: () => {
       toast.success("Account created! Sign in to continue.");
       onSuccess?.();
@@ -145,27 +173,53 @@ function RegisterForm({ onSuccess }) {
   });
 
   return (
-    <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="space-y-4">
+    <form
+      onSubmit={handleSubmit((v) => mutation.mutate(v))}
+      className="space-y-4"
+    >
       <div className="space-y-2">
         <Label htmlFor="reg-name">Full Name</Label>
         <Input id="reg-name" placeholder="John Doe" {...register("name")} />
-        {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+        {errors.name && (
+          <p className="text-sm text-destructive">{errors.name.message}</p>
+        )}
       </div>
       <div className="space-y-2">
         <Label htmlFor="reg-email">Email</Label>
-        <Input id="reg-email" type="email" placeholder="you@example.com" {...register("email")} />
-        {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+        <Input
+          id="reg-email"
+          type="email"
+          placeholder="you@example.com"
+          {...register("email")}
+        />
+        {errors.email && (
+          <p className="text-sm text-destructive">{errors.email.message}</p>
+        )}
       </div>
       <div className="space-y-2">
         <Label htmlFor="reg-password">Password</Label>
-        <Input id="reg-password" type="password" placeholder="••••••••" {...register("password")} />
-        {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+        <Input
+          id="reg-password"
+          type="password"
+          placeholder="••••••••"
+          {...register("password")}
+        />
+        {errors.password && (
+          <p className="text-sm text-destructive">{errors.password.message}</p>
+        )}
       </div>
       <div className="space-y-2">
         <Label htmlFor="reg-confirm">Confirm Password</Label>
-        <Input id="reg-confirm" type="password" placeholder="••••••••" {...register("confirmPassword")} />
+        <Input
+          id="reg-confirm"
+          type="password"
+          placeholder="••••••••"
+          {...register("confirmPassword")}
+        />
         {errors.confirmPassword && (
-          <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
+          <p className="text-sm text-destructive">
+            {errors.confirmPassword.message}
+          </p>
         )}
       </div>
       <div className="space-y-2">
@@ -180,7 +234,9 @@ function RegisterForm({ onSuccess }) {
             <SelectItem value="admin">Admin</SelectItem>
           </SelectContent>
         </Select>
-        <p className="text-[11px] text-muted-foreground">For demo/testing — production would restrict this</p>
+        <p className="text-[11px] text-muted-foreground">
+          For demo/testing — production would restrict this
+        </p>
       </div>
       <Button type="submit" className="w-full" disabled={mutation.isPending}>
         {mutation.isPending ? "Creating account…" : "Create Account"}
@@ -193,38 +249,79 @@ function RegisterForm({ onSuccess }) {
 
 export default function Landing() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const defaultTab = location.pathname === "/register" ? "register" : "signin";
   const [tab, setTab] = useState(defaultTab);
+
+  const getDashboardPath = () => {
+    if (!user) return "/login";
+    switch (user.role) {
+      case "admin":
+        return "/admin";
+      case "agent":
+        return "/agent";
+      default:
+        return "/chat";
+    }
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
       {/* ── Navbar ── */}
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-          <a href="/" className="flex items-center gap-2 font-semibold">
-            <MessageSquare className="h-5 w-5 text-primary" />
-            <span>SupportIQ</span>
-          </a>
+          <Link to="/">
+            <SupportIQWordmark />
+          </Link>
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
-              size="sm"
-              onClick={() => {
-                setTab("signin");
-                document.getElementById("auth-section")?.scrollIntoView({ behavior: "smooth" });
-              }}
+              size="icon"
+              className="h-8 w-8"
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             >
-              Sign In
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
-            <Button
-              size="sm"
-              onClick={() => {
-                setTab("register");
-                document.getElementById("auth-section")?.scrollIntoView({ behavior: "smooth" });
-              }}
-            >
-              Get Started
-            </Button>
+            {isAuthenticated ? (
+              <>
+                <span className="hidden text-sm text-muted-foreground sm:inline">
+                  {user.name}
+                </span>
+                <Button size="sm" onClick={() => navigate(getDashboardPath())}>
+                  Dashboard
+                  <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setTab("signin");
+                    document
+                      .getElementById("auth-section")
+                      ?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                >
+                  Sign In
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setTab("register");
+                    document
+                      .getElementById("auth-section")
+                      ?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                >
+                  Get Started
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -234,12 +331,14 @@ export default function Landing() {
         <div className="mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-2 lg:gap-20">
           {/* Left — copy */}
           <div className="order-2 lg:order-1">
-            <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
-              <Zap className="h-6 w-6 text-primary" />
+            <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
+              <Zap className="h-6 w-6" />
             </div>
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
               Customer Support,{" "}
-              <span className="text-primary">Supercharged&nbsp;by&nbsp;AI</span>
+              <span className="text-muted-foreground">
+                Supercharged&nbsp;by&nbsp;AI
+              </span>
             </h1>
             <p className="mt-4 text-lg text-muted-foreground leading-relaxed">
               SupportIQ uses Retrieval-Augmented Generation to deliver instant,
@@ -249,8 +348,8 @@ export default function Landing() {
             <div className="mt-10 grid grid-cols-2 gap-4">
               {features.map(({ icon: Icon, title, description }) => (
                 <div key={title} className="flex gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                    <Icon className="h-4 w-4 text-primary" />
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                    <Icon className="h-4 w-4" />
                   </div>
                   <div>
                     <p className="text-sm font-medium">{title}</p>
@@ -263,39 +362,67 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* Right — auth card */}
+          {/* Right — auth card (or dashboard CTA when logged in) */}
           <div className="order-1 lg:order-2" id="auth-section">
-            <Card className="mx-auto w-full max-w-md shadow-lg">
-              <CardHeader className="text-center pb-2">
-                <div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-primary">
-                  <MessageSquare className="h-5 w-5 text-primary-foreground" />
-                </div>
-                <CardTitle className="text-xl">Welcome to SupportIQ</CardTitle>
-                <CardDescription>
-                  {tab === "signin"
-                    ? "Sign in to your account"
-                    : "Create a new account to get started"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Tabs value={tab} onValueChange={setTab}>
-                  <TabsList className="mb-4 w-full">
-                    <TabsTrigger value="signin" className="flex-1">
-                      Sign In
-                    </TabsTrigger>
-                    <TabsTrigger value="register" className="flex-1">
-                      Register
-                    </TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="signin">
-                    <SignInForm />
-                  </TabsContent>
-                  <TabsContent value="register">
-                    <RegisterForm onSuccess={() => setTab("signin")} />
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
+            {isAuthenticated ? (
+              <Card className="mx-auto w-full max-w-md shadow-lg">
+                <CardHeader className="text-center">
+                  <div className="mx-auto mb-2">
+                    <SupportIQIcon className="h-11 w-11" />
+                  </div>
+                  <CardTitle className="text-xl">
+                    Welcome back, {user.name}
+                  </CardTitle>
+                  <CardDescription>
+                    You're signed in as{" "}
+                    <span className="capitalize font-medium">{user.role}</span>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    className="w-full"
+                    onClick={() => navigate(getDashboardPath())}
+                  >
+                    Go to Dashboard
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="mx-auto w-full max-w-md shadow-lg">
+                <CardHeader className="text-center pb-2">
+                  <div className="mx-auto mb-2">
+                    <SupportIQIcon className="h-11 w-11" />
+                  </div>
+                  <CardTitle className="text-xl">
+                    Welcome to SupportIQ
+                  </CardTitle>
+                  <CardDescription>
+                    {tab === "signin"
+                      ? "Sign in to your account"
+                      : "Create a new account to get started"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Tabs value={tab} onValueChange={setTab}>
+                    <TabsList className="mb-4 w-full">
+                      <TabsTrigger value="signin" className="flex-1">
+                        Sign In
+                      </TabsTrigger>
+                      <TabsTrigger value="register" className="flex-1">
+                        Register
+                      </TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="signin">
+                      <SignInForm />
+                    </TabsContent>
+                    <TabsContent value="register">
+                      <RegisterForm onSuccess={() => setTab("signin")} />
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </section>
@@ -304,7 +431,8 @@ export default function Landing() {
       <footer className="border-t py-6">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4">
           <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} SupportIQ &mdash; University capstone project
+            &copy; {new Date().getFullYear()} SupportIQ &mdash; University
+            capstone project
           </p>
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <Zap className="h-3 w-3" />

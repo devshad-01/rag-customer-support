@@ -18,7 +18,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  MessageSquare,
   Plus,
   Send,
   FileText,
@@ -32,9 +31,18 @@ import {
   Shield,
   ShieldAlert,
   ShieldCheck,
+  Sparkles,
+  PanelLeft,
+  ChevronsLeft,
+  LogOut,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
+import { SupportIQIcon } from "@/components/SupportIQLogo";
 
 // ── Relevance progress bar ───────────────────────────────────
 
@@ -73,13 +81,13 @@ function SourceCard({ source, onViewDocument }) {
       >
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 truncate">
-            <FileText className="h-3.5 w-3.5 shrink-0 text-primary" />
+            <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             <span className="font-medium truncate">{source.title}</span>
             {source.page_number != null && (
-              <span className="text-muted-foreground">Page {source.page_number}</span>
+              <span className="text-muted-foreground">p.{source.page_number}</span>
             )}
             {source.is_primary && (
-              <Badge variant="default" className="text-[9px] px-1 py-0 h-4">
+              <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4">
                 Primary
               </Badge>
             )}
@@ -163,7 +171,7 @@ function EvidenceWarning({ evidence }) {
       <div>
         <p className="font-medium">Limited supporting evidence</p>
         <p className="mt-0.5 text-yellow-700 dark:text-yellow-400">
-          This response may not be fully accurate. Consider contacting a support agent for assistance.
+          This response may not be fully accurate. Consider contacting a support agent.
         </p>
       </div>
     </div>
@@ -229,11 +237,11 @@ function ChatBubble({ message, onViewDocument }) {
       <div
         className={cn(
           "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
-          isUser ? "bg-primary" : isAgent ? "bg-orange-500" : "bg-muted"
+          isUser ? "bg-foreground" : isAgent ? "bg-orange-500" : "bg-muted"
         )}
       >
         {isUser ? (
-          <User className="h-4 w-4 text-primary-foreground" />
+          <User className="h-4 w-4 text-background" />
         ) : (
           <Bot className={cn("h-4 w-4", isAgent ? "text-white" : "text-muted-foreground")} />
         )}
@@ -243,17 +251,15 @@ function ChatBubble({ message, onViewDocument }) {
           className={cn(
             "rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
             isUser
-              ? "rounded-tr-sm bg-primary text-primary-foreground"
+              ? "rounded-tr-sm bg-foreground text-background"
               : "rounded-tl-sm bg-muted"
           )}
         >
           {message.content}
         </div>
 
-        {/* Evidence warning for weak sources */}
         {!isUser && <EvidenceWarning evidence={evidence} />}
 
-        {/* Confidence badge + timestamp row */}
         <div className="flex items-center gap-2">
           {!isUser && <ConfidenceBadge confidence={message.confidence} />}
           <span className="text-[10px] text-muted-foreground">
@@ -264,7 +270,6 @@ function ChatBubble({ message, onViewDocument }) {
           </span>
         </div>
 
-        {/* Collapsible source section */}
         {!isUser && (
           <SourcesSection sources={sources} onViewDocument={onViewDocument} />
         )}
@@ -287,7 +292,7 @@ function DocumentPreviewModal({ documentId, open, onClose }) {
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-primary" />
+            <FileText className="h-5 w-5 text-muted-foreground" />
             {preview?.title || "Document Preview"}
           </DialogTitle>
         </DialogHeader>
@@ -297,7 +302,6 @@ function DocumentPreviewModal({ documentId, open, onClose }) {
           </div>
         ) : preview ? (
           <div className="flex flex-col gap-3 overflow-y-auto pr-2">
-            {/* Document metadata */}
             <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
               {preview.page_count && (
                 <Badge variant="outline">{preview.page_count} pages</Badge>
@@ -306,7 +310,6 @@ function DocumentPreviewModal({ documentId, open, onClose }) {
               <Badge variant="outline">{preview.status}</Badge>
             </div>
             <Separator />
-            {/* Chunks */}
             {preview.chunks?.map((chunk) => (
               <div key={chunk.id} className="rounded-lg border p-3">
                 <div className="mb-1.5 flex items-center gap-2 text-xs text-muted-foreground">
@@ -341,16 +344,16 @@ function ConversationItem({ conv, isActive, onClick }) {
     <button
       onClick={onClick}
       className={cn(
-        "w-full rounded-md px-3 py-2 text-left text-sm transition",
+        "w-full rounded-lg px-3 py-2.5 text-left text-sm transition",
         isActive
-          ? "bg-primary text-primary-foreground"
-          : "hover:bg-accent text-muted-foreground hover:text-accent-foreground"
+          ? "bg-foreground text-background"
+          : "hover:bg-muted text-muted-foreground hover:text-foreground"
       )}
     >
       <p className="truncate font-medium">{conv.title || "New chat"}</p>
       {conv.last_message && (
-        <p className="mt-0.5 truncate text-xs opacity-75">
-          {conv.last_message.slice(0, 60)}
+        <p className="mt-0.5 truncate text-xs opacity-60">
+          {conv.last_message.slice(0, 50)}
         </p>
       )}
     </button>
@@ -360,14 +363,16 @@ function ConversationItem({ conv, isActive, onClick }) {
 // ── Main Chat page ───────────────────────────────────────────
 
 export default function Chat() {
+  const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [activeConvId, setActiveConvId] = useState(null);
   const [input, setInput] = useState("");
   const [optimisticMsg, setOptimisticMsg] = useState(null);
   const [previewDocId, setPreviewDocId] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const queryClient = useQueryClient();
   const messagesEndRef = useRef(null);
 
-  // Auto-scroll to bottom when messages change
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -386,12 +391,25 @@ export default function Chat() {
     enabled: !!activeConvId,
   });
 
-  // Scroll when messages update or optimistic msg changes
   useEffect(() => {
     scrollToBottom();
   }, [messages, optimisticMsg]);
 
-  // Create conversation
+  // Create conversation — prevent stacking empty ones
+  const handleNewConversation = () => {
+    // If the current conversation has no messages, just stay on it
+    if (activeConvId && messages.length === 0) return;
+    // If there's already an empty conversation in the list, switch to it
+    const emptyConv = conversations.find(
+      (c) => !c.last_message && c.id !== activeConvId
+    );
+    if (emptyConv) {
+      setActiveConvId(emptyConv.id);
+      return;
+    }
+    createMutation.mutate();
+  };
+
   const createMutation = useMutation({
     mutationFn: () => createConversation(null),
     onSuccess: (conv) => {
@@ -421,7 +439,6 @@ export default function Chat() {
 
     let convId = activeConvId;
 
-    // If no active conversation, create one first
     if (!convId) {
       try {
         const conv = await createMutation.mutateAsync();
@@ -432,7 +449,6 @@ export default function Chat() {
       }
     }
 
-    // Set optimistic user message immediately
     setOptimisticMsg({
       id: "optimistic",
       sender_role: "customer",
@@ -454,57 +470,168 @@ export default function Chat() {
   const isSending = sendMutation.isPending || createMutation.isPending;
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] flex-col md:flex-row">
-      {/* ── Conversation list sidebar ── */}
-      <aside className="w-full shrink-0 border-b md:w-64 md:border-b-0 md:border-r">
-        <div className="flex items-center justify-between p-3">
-          <h2 className="text-sm font-semibold">Conversations</h2>
+    <div className="relative flex h-screen bg-background p-3 gap-3">
+      {/* ── Sidebar open button (visible when sidebar closed) ── */}
+      {!sidebarOpen && (
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="absolute left-5 top-5 z-20 flex h-8 w-8 items-center justify-center rounded-lg border bg-background shadow-sm transition hover:bg-muted"
+          title="Show sidebar"
+        >
+          <PanelLeft className="h-4 w-4" />
+        </button>
+      )}
+
+      {/* ── Conversation sidebar (floating) ── */}
+      <aside
+        className={cn(
+          "shrink-0 flex flex-col rounded-2xl bg-muted/40 border transition-all duration-200",
+          sidebarOpen ? "w-72" : "w-0 overflow-hidden border-0 p-0"
+        )}
+      >
+        {/* Sidebar header */}
+        <div className="flex items-center gap-2 px-3 pt-3 pb-2">
+          <SupportIQIcon className="h-7 w-7 shrink-0" />
+          <span className="text-sm font-semibold tracking-tight flex-1">
+            SupportIQ
+          </span>
           <Button
-            size="sm"
+            size="icon"
             variant="ghost"
-            onClick={() => createMutation.mutate()}
-            disabled={createMutation.isPending}
+            className="h-7 w-7"
+            onClick={() => setSidebarOpen(false)}
+            title="Close sidebar"
           >
-            <Plus className="h-4 w-4" />
+            <ChevronsLeft className="h-4 w-4" />
           </Button>
         </div>
+
+        {/* New conversation button */}
+        <div className="px-3 pb-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start gap-2 text-xs"
+            onClick={handleNewConversation}
+            disabled={createMutation.isPending}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            New Conversation
+          </Button>
+        </div>
+
         <Separator />
-        <div className="flex max-h-48 flex-col gap-1 overflow-y-auto p-2 md:max-h-none md:flex-1">
-          {conversations.length === 0 ? (
-            <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-              No conversations yet
-            </p>
-          ) : (
-            conversations.map((conv) => (
-              <ConversationItem
-                key={conv.id}
-                conv={conv}
-                isActive={conv.id === activeConvId}
-                onClick={() => setActiveConvId(conv.id)}
-              />
-            ))
-          )}
+
+        {/* Conversation list — hidden scrollbar + bottom fade */}
+        <div className="relative flex-1 min-h-0">
+          <div className="flex h-full flex-col gap-0.5 overflow-y-auto p-2 scrollbar-hide">
+            {conversations.length === 0 ? (
+              <p className="px-3 py-8 text-center text-xs text-muted-foreground">
+                No conversations yet
+              </p>
+            ) : (
+              conversations.map((conv) => (
+                <ConversationItem
+                  key={conv.id}
+                  conv={conv}
+                  isActive={conv.id === activeConvId}
+                  onClick={() => setActiveConvId(conv.id)}
+                />
+              ))
+            )}
+          </div>
+          {/* Bottom fade overlay */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-muted/40 to-transparent rounded-b-lg" />
+        </div>
+
+        {/* ── User footer (fixed at bottom) ── */}
+        <div className="border-t px-3 py-2.5">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-foreground">
+              <User className="h-4 w-4 text-background" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="truncate text-sm font-medium leading-tight">{user?.name}</p>
+              <p className="truncate text-[11px] text-muted-foreground leading-tight">{user?.email}</p>
+            </div>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-muted-foreground"
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Light mode" : "Dark mode"}
+            >
+              {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+              onClick={logout}
+              title="Sign out"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
       </aside>
 
-      {/* ── Chat area ── */}
-      <div className="flex flex-1 flex-col">
+      {/* ── Chat area (no toolbar) ── */}
+      <div className="flex flex-1 flex-col min-w-0">
         {!activeConvId ? (
-          /* Empty state */
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-              <MessageSquare className="h-8 w-8 text-primary" />
+          /* ── Empty state ── */
+          <div className="flex flex-1 flex-col items-center justify-center gap-5 p-6 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+              <SupportIQIcon className="h-9 w-9" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold">Start a conversation</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Ask a question about our products and services
+              <h2 className="text-xl font-semibold tracking-tight">
+                What can I help you with?
+              </h2>
+              <p className="mt-1.5 text-sm text-muted-foreground max-w-sm">
+                Ask a question about our products and services. Answers are
+                sourced directly from our knowledge base.
               </p>
             </div>
-            <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Conversation
-            </Button>
+
+            <div className="mt-2 flex w-full max-w-lg items-center gap-2 rounded-2xl border bg-muted/30 px-3 py-2 shadow-sm transition-colors focus-within:bg-muted/50 focus-within:ring-1 focus-within:ring-ring">
+              <Input
+                placeholder="Type your question..."
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey && input.trim()) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                disabled={isSending}
+                className="flex-1 border-0 bg-transparent shadow-none focus-visible:ring-0"
+              />
+              <Button
+                size="icon"
+                className="h-8 w-8 rounded-xl"
+                onClick={handleSend}
+                disabled={isSending || !input.trim()}
+              >
+                {isSending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>AI-powered</span>
+              <span className="text-border">|</span>
+              <FileText className="h-3.5 w-3.5" />
+              <span>Source-backed</span>
+              <span className="text-border">|</span>
+              <ShieldCheck className="h-3.5 w-3.5" />
+              <span>Human fallback</span>
+            </div>
           </div>
         ) : (
           <>
@@ -516,9 +643,12 @@ export default function Chat() {
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
                 ) : messages.length === 0 && !optimisticMsg ? (
-                  <p className="py-12 text-center text-sm text-muted-foreground">
-                    Send a message to get started
-                  </p>
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <Bot className="h-8 w-8 text-muted-foreground/50 mb-3" />
+                    <p className="text-sm text-muted-foreground">
+                      Send a message to get started
+                    </p>
+                  </div>
                 ) : (
                   messages.map((msg) => (
                     <ChatBubble
@@ -528,26 +658,28 @@ export default function Chat() {
                     />
                   ))
                 )}
-                {/* Optimistic user message while waiting for API */}
-                {optimisticMsg && <ChatBubble message={optimisticMsg} onViewDocument={setPreviewDocId} />}
+                {optimisticMsg && (
+                  <ChatBubble message={optimisticMsg} onViewDocument={setPreviewDocId} />
+                )}
                 {isSending && <TypingIndicator />}
                 <div ref={messagesEndRef} />
               </div>
             </div>
 
-            {/* Input bar */}
-            <div className="border-t p-4">
-              <div className="mx-auto flex max-w-3xl items-center gap-2">
+            {/* Input bar — seamless */}
+            <div className="px-4 pb-4 pt-2">
+              <div className="mx-auto flex max-w-3xl items-center gap-2 rounded-2xl border bg-muted/30 px-3 py-2 shadow-sm transition-colors focus-within:bg-muted/50 focus-within:ring-1 focus-within:ring-ring">
                 <Input
                   placeholder="Type your question..."
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   disabled={isSending}
-                  className="flex-1"
+                  className="flex-1 border-0 bg-transparent shadow-none focus-visible:ring-0"
                 />
                 <Button
                   size="icon"
+                  className="h-8 w-8 rounded-xl"
                   onClick={handleSend}
                   disabled={isSending || !input.trim()}
                 >
