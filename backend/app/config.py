@@ -19,9 +19,16 @@ class Settings(BaseSettings):
     QDRANT_URL: str = "http://localhost:6333"
     QDRANT_COLLECTION: str = "documents"
 
-    # ── Ollama / LLM ─────────────────────────────────────────
+    # ── LLM Provider ─────────────────────────────────────────
+    LLM_PROVIDER: str = "ollama"  # "ollama" (local) or "gemini" (online)
+
+    # Ollama (local)
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "mistral"
+
+    # Google Gemini (online)
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.0-flash"
 
     # ── Embeddings ────────────────────────────────────────────
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"

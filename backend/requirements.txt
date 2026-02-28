@@ -22,6 +22,7 @@ langchain-community==0.3.*
 langchain-text-splitters==0.3.*
 langchain-ollama==0.3.*
 pymupdf==1.25.*
+google-genai>=1.0
 
 # Reporting (Week 8)
 reportlab==4.2.*
