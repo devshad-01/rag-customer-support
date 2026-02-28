@@ -198,9 +198,9 @@ async def send_message(
                 conversation_id=conversation_id,
                 sender_role=SenderRole.ai,
                 content=(
-                    "Your conversation is currently being reviewed by a support agent. "
-                    "They'll respond shortly. Your message has been added to the conversation "
-                    "and the agent will see it."
+                    "A support agent has been assigned to your conversation and will reply soon. "
+                    "Feel free to send any additional details or context that might help "
+                    "them assist you faster."
                 ),
             )
             db.add(ai_msg)
@@ -343,6 +343,18 @@ async def send_message(
                 reason="Auto-escalated: low confidence response",
                 confidence_score=result["confidence"]["confidence_score"],
             )
+            # Notify the customer that escalation happened
+            escalation_notice = Message(
+                conversation_id=conversation_id,
+                sender_role=SenderRole.ai,
+                content=(
+                    "I wasn't confident enough in my answer, so I've connected you "
+                    "with a human support agent. They'll review your conversation and "
+                    "respond shortly. You can keep sending messages here — the agent "
+                    "will see everything."
+                ),
+            )
+            db.add(escalation_notice)
             logger.info("Auto-escalated conv=%d (confidence=%.2f)", conversation_id, result["confidence"]["confidence_score"])
         except Exception as esc_err:
             logger.error("Auto-escalation failed for conv=%d: %s", conversation_id, esc_err)
@@ -466,9 +478,9 @@ async def escalate_conversation(
         conversation_id=conversation_id,
         sender_role=SenderRole.ai,
         content=(
-            "Your conversation has been escalated to a human support agent. "
-            "An agent will review your conversation and respond shortly. "
-            "You can continue chatting here and the agent will see your messages."
+            "You've been connected with a human support agent who will review "
+            "your conversation and respond shortly. Feel free to add any extra "
+            "details here — the agent will see everything you send."
         ),
     )
     db.add(system_msg)
