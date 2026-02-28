@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.dependencies import get_current_user
 from app.core.security import create_access_token
 from app.database import get_db
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas.auth import TokenResponse, UserLogin, UserRegister, UserResponse
 from app.services import user_service
 
@@ -26,6 +26,7 @@ async def register(payload: UserRegister, db: Session = Depends(get_db)):
             name=payload.name,
             email=payload.email,
             password=payload.password,
+            role=UserRole(payload.role),
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
