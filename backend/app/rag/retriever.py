@@ -28,10 +28,19 @@ def retrieve_relevant_chunks(
           chunk_text, source_title, page_number, document_id, score
         Sorted by score descending.  Empty list when nothing is relevant.
     """
+    query = (query or "").strip()
+    if not query:
+        logger.warning("Empty query received, returning no chunks")
+        return []
+
     logger.info("Retrieving chunks for query: %.80s…", query)
 
-    # Step 1 — embed the query with the same model used during ingestion
-    query_embedding = embed_query(query)
+    try:
+        # Step 1 — embed the query with the same model used during ingestion
+        query_embedding = embed_query(query)
+    except Exception as exc:
+        logger.error("Query embedding failed: %s", exc)
+        return []
 
     # Step 2 — search Qdrant
     raw_results = search_similar(query_embedding, top_k=top_k)

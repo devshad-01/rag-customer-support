@@ -1,6 +1,7 @@
 """LLM client — generate text via Ollama (local) or Google Gemini (online)."""
 
 import logging
+import asyncio
 import httpx
 from google import genai
 
@@ -58,7 +59,9 @@ async def _generate_ollama(prompt: str) -> str:
 async def _generate_gemini(prompt: str) -> str:
     """Generate a response using Google Gemini API."""
     client = _get_gemini_client()
-    response = client.models.generate_content(
+    # Run blocking SDK call in a thread to avoid blocking the event loop
+    response = await asyncio.to_thread(
+        client.models.generate_content,
         model=settings.GEMINI_MODEL,
         contents=prompt,
         config=genai.types.GenerateContentConfig(

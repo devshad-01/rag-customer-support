@@ -131,23 +131,53 @@ async def send_message(
         raise HTTPException(status_code=404, detail="Conversation not found")
     if conv.customer_id != current_user.id and current_user.role.value not in ("admin", "agent"):
         raise HTTPException(status_code=403, detail="Not your conversation")
+    if conv.status in (ConversationStatus.closed,):
+        raise HTTPException(status_code=400, detail="This conversation is closed")
+
+    # Validate message content
+    content = (body.content or "").strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
 
     # Auto-set conversation title from first message
     if not conv.title:
-        conv.title = body.content[:80] + ("…" if len(body.content) > 80 else "")
+        conv.title = content[:80] + ("\u2026" if len(content) > 80 else "")
 
     # Save user message
     user_msg = Message(
         conversation_id=conversation_id,
         sender_role=SenderRole.customer,
-        content=body.content,
+        content=content,
     )
     db.add(user_msg)
     db.commit()
     db.refresh(user_msg)
 
-    # Run RAG pipeline
-    result = await process_query(body.content)
+    # Run RAG pipeline (with error recovery)
+    try:
+        result = await process_query(content)
+    except Exception as exc:
+        logger.error("RAG pipeline crashed for conv=%d: %s", conversation_id, exc)
+        result = {
+            "response": (
+                "I'm sorry, I encountered an error while processing your question. "
+                "Please try again or ask to speak with a human agent."
+            ),
+            "sources": [],
+            "confidence": {
+                "confidence_score": 0.0,
+                "has_sufficient_evidence": False,
+                "escalation_action": "auto",
+            },
+            "evidence": {
+                "evidence_quality": "none",
+                "has_sufficient_evidence": False,
+                "disclaimer": "An error occurred.",
+            },
+            "highlights": [],
+            "total_sources_found": 0,
+            "response_time_ms": 0,
+        }
 
     # Prepare sources + confidence + evidence JSON to store with AI message
     metadata = {
@@ -171,7 +201,7 @@ async def send_message(
     query_log = QueryLog(
         conversation_id=conversation_id,
         customer_id=current_user.id,
-        query_text=body.content,
+        query_text=content,
         response_text=result["response"],
         confidence_score=result["confidence"]["confidence_score"],
         has_sufficient_evidence=result["confidence"]["has_sufficient_evidence"],

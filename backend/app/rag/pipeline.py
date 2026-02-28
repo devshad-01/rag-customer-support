@@ -43,39 +43,64 @@ async def process_query(query: str) -> dict:
     """
     start = time.perf_counter()
 
-    # Step 1 — Retrieve
-    chunks = retrieve_relevant_chunks(query, top_k=5)
+    try:
+        # Step 1 — Retrieve
+        chunks = retrieve_relevant_chunks(query, top_k=5)
 
-    # Step 2 — Score confidence
-    confidence = calculate_confidence(chunks)
+        # Step 2 — Score confidence
+        confidence = calculate_confidence(chunks)
 
-    # Step 3 — Build source references & rank them
-    sources = [
-        {
-            "title": c.get("source_title") or f"Document {c.get('document_id', '?')}",
-            "page_number": c.get("page_number"),
-            "chunk_text": c.get("chunk_text", ""),
-            "score": round(c.get("score", 0), 4),
-            "document_id": c.get("document_id"),
-            "chunk_id": c.get("chunk_id", ""),
+        # Step 3 — Build source references & rank them
+        sources = [
+            {
+                "title": c.get("source_title") or f"Document {c.get('document_id', '?')}",
+                "page_number": c.get("page_number"),
+                "chunk_text": c.get("chunk_text", ""),
+                "score": round(c.get("score", 0), 4),
+                "document_id": c.get("document_id"),
+                "chunk_id": c.get("chunk_id", ""),
+            }
+            for c in chunks
+        ]
+        sources = rank_sources_by_relevance(sources)
+
+        # Step 4 — Assess evidence sufficiency
+        evidence = assess_evidence_sufficiency(sources, confidence["confidence_score"])
+
+        # Step 5 — Build prompt & generate
+        prompt = build_prompt(query, chunks)
+        response_text = await generate_response(prompt)
+
+        # Step 6 — Prepend disclaimer if evidence is weak
+        if evidence["disclaimer"]:
+            response_text = f"⚠️ {evidence['disclaimer']}\n\n{response_text}"
+
+        # Step 7 — Highlight relevant passages
+        highlights = highlight_relevant_passages(response_text, sources)
+
+    except Exception as exc:
+        logger.error("RAG pipeline error: %s", exc, exc_info=True)
+        elapsed_ms = int((time.perf_counter() - start) * 1000)
+        return {
+            "response": (
+                "I'm sorry, I encountered an error while processing your question. "
+                "Please try again or ask to speak with a human agent."
+            ),
+            "sources": [],
+            "confidence": {
+                "confidence_score": 0.0,
+                "has_sufficient_evidence": False,
+                "escalation_action": "auto",
+            },
+            "evidence": {
+                "evidence_quality": "none",
+                "has_sufficient_evidence": False,
+                "disclaimer": "An error occurred while processing your query.",
+            },
+            "highlights": [],
+            "total_sources_found": 0,
+            "response_time_ms": elapsed_ms,
         }
-        for c in chunks
-    ]
-    sources = rank_sources_by_relevance(sources)
-
-    # Step 4 — Assess evidence sufficiency
-    evidence = assess_evidence_sufficiency(sources, confidence["confidence_score"])
-
-    # Step 5 — Build prompt & generate
-    prompt = build_prompt(query, chunks)
-    response_text = await generate_response(prompt)
-
-    # Step 6 — Prepend disclaimer if evidence is weak
-    if evidence["disclaimer"]:
-        response_text = f"⚠️ {evidence['disclaimer']}\n\n{response_text}"
-
-    # Step 7 — Highlight relevant passages
-    highlights = highlight_relevant_passages(response_text, sources)
 
     elapsed_ms = int((time.perf_counter() - start) * 1000)
 

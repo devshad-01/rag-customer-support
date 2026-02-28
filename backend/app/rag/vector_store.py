@@ -123,23 +123,28 @@ def search_similar(
     """Search for the most similar chunks to a query embedding.
 
     Returns list of dicts with 'score', 'chunk_text', 'document_id',
-    'chunk_index', 'page_number'.
+    'chunk_index', 'page_number'.  Returns empty list on failure.
     """
-    client = client or get_qdrant_client()
-    results = client.search(
-        collection_name=settings.QDRANT_COLLECTION,
-        query_vector=query_embedding,
-        limit=top_k,
-    )
-    return [
-        {
-            "score": hit.score,
-            "chunk_id": str(hit.id),
-            "chunk_text": hit.payload.get("chunk_text", ""),
-            "document_id": hit.payload.get("document_id"),
-            "chunk_index": hit.payload.get("chunk_index"),
-            "page_number": hit.payload.get("page_number"),
-            "source_title": hit.payload.get("source_title", ""),
-        }
-        for hit in results
-    ]
+    try:
+        client = client or get_qdrant_client()
+        ensure_collection_exists(client)
+        results = client.search(
+            collection_name=settings.QDRANT_COLLECTION,
+            query_vector=query_embedding,
+            limit=top_k,
+        )
+        return [
+            {
+                "score": hit.score,
+                "chunk_id": str(hit.id),
+                "chunk_text": hit.payload.get("chunk_text", ""),
+                "document_id": hit.payload.get("document_id"),
+                "chunk_index": hit.payload.get("chunk_index"),
+                "page_number": hit.payload.get("page_number"),
+                "source_title": hit.payload.get("source_title", ""),
+            }
+            for hit in results
+        ]
+    except Exception as exc:
+        logger.error("Qdrant search failed: %s", exc)
+        return []

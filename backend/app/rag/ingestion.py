@@ -6,7 +6,7 @@ import fitz  # pymupdf
 
 from app.rag.chunker import Chunk, split_pages
 from app.rag.embedder import embed_texts
-from app.rag.vector_store import store_embeddings
+from app.rag.vector_store import delete_document_vectors, store_embeddings
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +49,13 @@ def ingest_document(document_id: int, file_path: str, source_title: str = "") ->
     chunks: list[Chunk] = split_pages(pages)
     if not chunks:
         raise ValueError("Text splitting produced zero chunks")
+
+    # Step 2.5: Delete any existing vectors for this document (idempotent re-ingestion)
+    try:
+        delete_document_vectors(document_id)
+        logger.info("Cleared existing vectors for document_id=%d before re-ingestion", document_id)
+    except Exception as exc:
+        logger.warning("Could not clear old vectors for doc %d: %s", document_id, exc)
 
     # Step 3: Embed
     chunk_texts = [c.text for c in chunks]
