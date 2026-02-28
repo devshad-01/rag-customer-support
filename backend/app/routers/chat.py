@@ -26,6 +26,8 @@ from app.schemas.chat import (
     MessageResponse,
     SourceReference,
 )
+from app.schemas.ticket import EscalationResponse
+from app.services import ticket_service
 
 logger = logging.getLogger(__name__)
 
@@ -217,6 +219,21 @@ async def send_message(
         response_time_ms=result["response_time_ms"],
     )
     db.add(query_log)
+
+    # Auto-escalate: create ticket when confidence is very low
+    if result["confidence"]["escalation_action"] == "auto":
+        try:
+            ticket_service.create_ticket(
+                db,
+                conversation_id=conversation_id,
+                customer_id=current_user.id,
+                reason="Auto-escalated: low confidence response",
+                confidence_score=result["confidence"]["confidence_score"],
+            )
+            logger.info("Auto-escalated conv=%d (confidence=%.2f)", conversation_id, result["confidence"]["confidence_score"])
+        except Exception as esc_err:
+            logger.error("Auto-escalation failed for conv=%d: %s", conversation_id, esc_err)
+
     db.commit()
     db.refresh(ai_msg)
 
