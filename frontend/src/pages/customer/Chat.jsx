@@ -5,6 +5,8 @@ import {
   createConversation,
   getMessages,
   sendMessage,
+  deleteConversation,
+  clearAllConversations,
 } from "@/services/chatApi";
 import { getDocumentPreview } from "@/services/documentApi";
 import { Button } from "@/components/ui/button";
@@ -17,6 +19,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Plus,
   Send,
@@ -37,6 +46,8 @@ import {
   LogOut,
   Moon,
   Sun,
+  Trash2,
+  MoreHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -339,24 +350,44 @@ function DocumentPreviewModal({ documentId, open, onClose }) {
 
 // ── Conversation list sidebar item ───────────────────────────
 
-function ConversationItem({ conv, isActive, onClick }) {
+function ConversationItem({ conv, isActive, onClick, onDelete }) {
   return (
-    <button
-      onClick={onClick}
+    <div
       className={cn(
-        "w-full rounded-lg px-3 py-2.5 text-left text-sm transition",
+        "group relative flex items-center rounded-lg transition",
         isActive
           ? "bg-neutral-800 text-neutral-50 dark:bg-neutral-600 dark:text-neutral-100"
           : "hover:bg-muted text-muted-foreground hover:text-foreground"
       )}
     >
-      <p className="truncate font-medium">{conv.title || "New chat"}</p>
-      {conv.last_message && (
-        <p className="mt-0.5 truncate text-xs opacity-60">
-          {conv.last_message.slice(0, 50)}
-        </p>
-      )}
-    </button>
+      <button
+        onClick={onClick}
+        className="flex-1 min-w-0 px-3 py-2.5 text-left text-sm"
+      >
+        <p className="truncate font-medium">{conv.title || "New chat"}</p>
+        {conv.last_message && (
+          <p className="mt-0.5 truncate text-xs opacity-60">
+            {conv.last_message.slice(0, 50)}
+          </p>
+        )}
+      </button>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(conv.id);
+        }}
+        className={cn(
+          "mr-1.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition",
+          "opacity-0 group-hover:opacity-100 focus:opacity-100",
+          isActive
+            ? "hover:bg-neutral-700 dark:hover:bg-neutral-500 text-neutral-300"
+            : "hover:bg-muted-foreground/10 text-muted-foreground"
+        )}
+        title="Delete conversation"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </button>
+    </div>
   );
 }
 
@@ -433,6 +464,35 @@ export default function Chat() {
     },
   });
 
+  // Delete a single conversation
+  const deleteMutation = useMutation({
+    mutationFn: (id) => deleteConversation(id),
+    onSuccess: (_, deletedId) => {
+      if (activeConvId === deletedId) setActiveConvId(null);
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    },
+    onError: () => toast.error("Failed to delete conversation"),
+  });
+
+  // Clear all conversations
+  const clearAllMutation = useMutation({
+    mutationFn: () => clearAllConversations(),
+    onSuccess: () => {
+      setActiveConvId(null);
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    },
+    onError: () => toast.error("Failed to clear conversations"),
+  });
+
+  const handleDelete = (id) => {
+    deleteMutation.mutate(id);
+  };
+
+  const handleClearAll = () => {
+    if (conversations.length === 0) return;
+    clearAllMutation.mutate();
+  };
+
   const handleSend = async () => {
     const trimmed = input.trim();
     if (!trimmed) return;
@@ -506,18 +566,37 @@ export default function Chat() {
           </Button>
         </div>
 
-        {/* New conversation button */}
-        <div className="px-3 pb-2">
+        {/* New conversation button + overflow menu */}
+        <div className="flex items-center gap-1.5 px-3 pb-2">
           <Button
             variant="outline"
             size="sm"
-            className="w-full justify-start gap-2 text-xs"
+            className="flex-1 justify-start gap-2 text-xs"
             onClick={handleNewConversation}
             disabled={createMutation.isPending}
           >
             <Plus className="h-3.5 w-3.5" />
             New Conversation
           </Button>
+          {conversations.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="h-8 w-8 shrink-0">
+                  <MoreHorizontal className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={handleClearAll}
+                  disabled={clearAllMutation.isPending}
+                >
+                  <Trash2 className="mr-2 h-3.5 w-3.5" />
+                  Clear All Conversations
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
         <Separator />
@@ -536,6 +615,7 @@ export default function Chat() {
                   conv={conv}
                   isActive={conv.id === activeConvId}
                   onClick={() => setActiveConvId(conv.id)}
+                  onDelete={handleDelete}
                 />
               ))
             )}

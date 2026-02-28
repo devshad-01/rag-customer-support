@@ -19,3 +19,11 @@ export async function getMessages(conversationId) {
   const { data } = await api.get(`/chat/${conversationId}/messages`);
   return data;
 }
+
+export async function deleteConversation(conversationId) {
+  await api.delete(`/chat/${conversationId}`);
+}
+
+export async function clearAllConversations() {
+  await api.delete("/chat/");
+}
