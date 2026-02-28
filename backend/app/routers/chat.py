@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
@@ -11,7 +12,7 @@ from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.models.conversation import Conversation, ConversationStatus, Message, SenderRole
 from app.models.query_log import QueryLog
-from app.models.ticket import Ticket
+from app.models.ticket import Ticket, TicketStatus
 from app.models.user import User
 from app.rag.pipeline import process_query
 from app.schemas.chat import (
@@ -32,6 +33,39 @@ from app.services import ticket_service
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/chat", tags=["Chat"])
+
+# ── Greeting / vague message detection ────────────────────────
+
+_GREETING_PATTERNS = re.compile(
+    r"^(hi|hey|hello|howdy|yo|sup|hiya|good\s*(morning|afternoon|evening|day)|"
+    r"thanks|thank\s*you|ok|okay|bye|goodbye|see\s*ya|cheers|"
+    r"what'?s?\s*up|how\s*are\s*you|how'?s?\s*it\s*going|"
+    r"help|help\s*me|i\s*need\s*help|"
+    r"hmm+|umm+|ah+|oh+|huh|lol|haha|wow"
+    r")[!?.,\s]*$",
+    re.IGNORECASE,
+)
+
+_GREETING_RESPONSE = (
+    "Hello! I'm here to help you with any questions about NovaTech Solutions' "
+    "products and services. Feel free to ask me anything specific, for example:\n\n"
+    "- What is your return policy?\n"
+    "- How do I set up my SmartHome Hub?\n"
+    "- What warranty coverage do you offer?\n\n"
+    "How can I assist you today?"
+)
+
+def _is_vague_message(content: str) -> bool:
+    """Return True if the message is a greeting or too vague for RAG."""
+    stripped = content.strip()
+    if len(stripped) < 3:
+        return True
+    if _GREETING_PATTERNS.match(stripped):
+        return True
+    # Single-word messages that aren't meaningful queries
+    if len(stripped.split()) <= 1 and len(stripped) < 15:
+        return True
+    return False
 
 
 # ── Helper ────────────────────────────────────────────────────
@@ -137,6 +171,58 @@ async def send_message(
     if conv.status in (ConversationStatus.closed,):
         raise HTTPException(status_code=400, detail="This conversation is closed")
 
+    # Block AI replies if conversation is already escalated
+    if conv.status == ConversationStatus.escalated:
+        # Check if there's an open/in-progress ticket
+        open_ticket = (
+            db.query(Ticket)
+            .filter(
+                Ticket.conversation_id == conversation_id,
+                Ticket.status.in_([TicketStatus.open, TicketStatus.in_progress]),
+            )
+            .first()
+        )
+        if open_ticket:
+            # Save the customer message so the agent can see it
+            content = (body.content or "").strip()
+            if not content:
+                raise HTTPException(status_code=400, detail="Message cannot be empty")
+            user_msg = Message(
+                conversation_id=conversation_id,
+                sender_role=SenderRole.customer,
+                content=content,
+            )
+            db.add(user_msg)
+            # Reply with a holding message (no RAG pipeline)
+            ai_msg = Message(
+                conversation_id=conversation_id,
+                sender_role=SenderRole.ai,
+                content=(
+                    "Your conversation is currently being reviewed by a support agent. "
+                    "They'll respond shortly. Your message has been added to the conversation "
+                    "and the agent will see it."
+                ),
+            )
+            db.add(ai_msg)
+            db.commit()
+            db.refresh(ai_msg)
+            return ChatResponse(
+                message=_msg_to_response(ai_msg),
+                sources=[],
+                confidence=ConfidenceInfo(
+                    confidence_score=0.0,
+                    has_sufficient_evidence=False,
+                    escalation_action="none",
+                ),
+                evidence=EvidenceInfo(
+                    has_sufficient_evidence=False,
+                    evidence_quality="none",
+                    disclaimer=None,
+                ),
+                highlights=[],
+                total_sources_found=0,
+            )
+
     # Validate message content
     content = (body.content or "").strip()
     if not content:
@@ -155,6 +241,33 @@ async def send_message(
     db.add(user_msg)
     db.commit()
     db.refresh(user_msg)
+
+    # Handle vague/greeting messages without RAG pipeline
+    if _is_vague_message(content):
+        ai_msg = Message(
+            conversation_id=conversation_id,
+            sender_role=SenderRole.ai,
+            content=_GREETING_RESPONSE,
+        )
+        db.add(ai_msg)
+        db.commit()
+        db.refresh(ai_msg)
+        return ChatResponse(
+            message=_msg_to_response(ai_msg),
+            sources=[],
+            confidence=ConfidenceInfo(
+                confidence_score=1.0,
+                has_sufficient_evidence=True,
+                escalation_action="none",
+            ),
+            evidence=EvidenceInfo(
+                has_sufficient_evidence=True,
+                evidence_quality="strong",
+                disclaimer=None,
+            ),
+            highlights=[],
+            total_sources_found=0,
+        )
 
     # Run RAG pipeline (with error recovery)
     try:
