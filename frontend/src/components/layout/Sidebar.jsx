@@ -2,22 +2,11 @@ import { NavLink } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 import {
-  MessageSquare,
   FileText,
   BarChart3,
-  Ticket,
   LayoutDashboard,
   Download,
 } from "lucide-react";
-
-const customerLinks = [
-  { to: "/chat", icon: MessageSquare, label: "Chat" },
-];
-
-const agentLinks = [
-  { to: "/agent", icon: LayoutDashboard, label: "Dashboard" },
-  { to: "/agent/tickets", icon: Ticket, label: "Tickets" },
-];
 
 const adminLinks = [
   { to: "/admin", icon: LayoutDashboard, label: "Dashboard" },
@@ -29,21 +18,14 @@ const adminLinks = [
 export default function Sidebar() {
   const { user } = useAuth();
 
-  // Customers only have one link (Chat) — the chat page has its own sidebar,
-  // so we hide the app sidebar entirely to avoid a double-sidebar layout.
-  if (user?.role === "customer") return null;
-
-  const links =
-    user?.role === "admin"
-      ? adminLinks
-      : user?.role === "agent"
-        ? agentLinks
-        : customerLinks;
+  // Only admin uses the shared sidebar.
+  // Customers have Chat's built-in sidebar; agents have AgentLayout.
+  if (user?.role !== "admin") return null;
 
   return (
     <aside className="hidden w-56 shrink-0 border-r bg-muted/40 md:block">
       <nav className="flex flex-col gap-1 p-4">
-        {links.map(({ to, icon: Icon, label }) => (
+        {adminLinks.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}

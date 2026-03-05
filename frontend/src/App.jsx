@@ -1,11 +1,13 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import AppLayout from "@/components/layout/AppLayout";
+import AgentLayout from "@/components/layout/AgentLayout";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import Landing from "@/pages/Landing";
 import Chat from "@/pages/customer/Chat";
 import AgentDashboard from "@/pages/agent/Dashboard";
 import TicketDetail from "@/pages/agent/TicketDetail";
+import TicketView from "@/pages/agent/TicketView";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import Documents from "@/pages/admin/Documents";
 import Analytics from "@/pages/admin/Analytics";
@@ -44,24 +46,6 @@ export default function App() {
           }
         />
 
-        {/* Agent */}
-        <Route
-          path="/agent"
-          element={
-            <ProtectedRoute allowedRoles={["agent"]}>
-              <AgentDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/agent/tickets"
-          element={
-            <ProtectedRoute allowedRoles={["agent"]}>
-              <TicketDetail />
-            </ProtectedRoute>
-          }
-        />
-
         {/* Admin */}
         <Route
           path="/admin"
@@ -92,6 +76,40 @@ export default function App() {
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <Reports />
+            </ProtectedRoute>
+          }
+        />
+      </Route>
+
+      {/* Agent — full-bleed layout with its own sidebar */}
+      <Route
+        element={
+          <ProtectedRoute>
+            <AgentLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route
+          path="/agent"
+          element={
+            <ProtectedRoute allowedRoles={["agent"]}>
+              <AgentDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/agent/tickets"
+          element={
+            <ProtectedRoute allowedRoles={["agent"]}>
+              <TicketDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/agent/tickets/:ticketId"
+          element={
+            <ProtectedRoute allowedRoles={["agent"]}>
+              <TicketView />
             </ProtectedRoute>
           }
         />

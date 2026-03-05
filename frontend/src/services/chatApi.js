@@ -27,3 +27,8 @@ export async function deleteConversation(conversationId) {
 export async function clearAllConversations() {
   await api.delete("/chat/");
 }
+
+export async function escalateConversation(conversationId) {
+  const { data } = await api.post(`/chat/${conversationId}/escalate`);
+  return data;
+}

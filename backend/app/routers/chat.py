@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
@@ -11,7 +12,7 @@ from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.models.conversation import Conversation, ConversationStatus, Message, SenderRole
 from app.models.query_log import QueryLog
-from app.models.ticket import Ticket
+from app.models.ticket import Ticket, TicketStatus
 from app.models.user import User
 from app.rag.pipeline import process_query
 from app.schemas.chat import (
@@ -26,10 +27,45 @@ from app.schemas.chat import (
     MessageResponse,
     SourceReference,
 )
+from app.schemas.ticket import EscalationResponse
+from app.services import ticket_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/chat", tags=["Chat"])
+
+# ── Greeting / vague message detection ────────────────────────
+
+_GREETING_PATTERNS = re.compile(
+    r"^(hi|hey|hello|howdy|yo|sup|hiya|good\s*(morning|afternoon|evening|day)|"
+    r"thanks|thank\s*you|ok|okay|bye|goodbye|see\s*ya|cheers|"
+    r"what'?s?\s*up|how\s*are\s*you|how'?s?\s*it\s*going|"
+    r"help|help\s*me|i\s*need\s*help|"
+    r"hmm+|umm+|ah+|oh+|huh|lol|haha|wow"
+    r")[!?.,\s]*$",
+    re.IGNORECASE,
+)
+
+_GREETING_RESPONSE = (
+    "Hello! I'm here to help you with any questions about NovaTech Solutions' "
+    "products and services. Feel free to ask me anything specific, for example:\n\n"
+    "- What is your return policy?\n"
+    "- How do I set up my SmartHome Hub?\n"
+    "- What warranty coverage do you offer?\n\n"
+    "How can I assist you today?"
+)
+
+def _is_vague_message(content: str) -> bool:
+    """Return True if the message is a greeting or too vague for RAG."""
+    stripped = content.strip()
+    if len(stripped) < 3:
+        return True
+    if _GREETING_PATTERNS.match(stripped):
+        return True
+    # Single-word messages that aren't meaningful queries
+    if len(stripped.split()) <= 1 and len(stripped) < 15:
+        return True
+    return False
 
 
 # ── Helper ────────────────────────────────────────────────────
@@ -135,6 +171,58 @@ async def send_message(
     if conv.status in (ConversationStatus.closed,):
         raise HTTPException(status_code=400, detail="This conversation is closed")
 
+    # Block AI replies if conversation is already escalated
+    if conv.status == ConversationStatus.escalated:
+        # Check if there's an open/in-progress ticket
+        open_ticket = (
+            db.query(Ticket)
+            .filter(
+                Ticket.conversation_id == conversation_id,
+                Ticket.status.in_([TicketStatus.open, TicketStatus.in_progress]),
+            )
+            .first()
+        )
+        if open_ticket:
+            # Save the customer message so the agent can see it
+            content = (body.content or "").strip()
+            if not content:
+                raise HTTPException(status_code=400, detail="Message cannot be empty")
+            user_msg = Message(
+                conversation_id=conversation_id,
+                sender_role=SenderRole.customer,
+                content=content,
+            )
+            db.add(user_msg)
+            # Reply with a holding message (no RAG pipeline)
+            ai_msg = Message(
+                conversation_id=conversation_id,
+                sender_role=SenderRole.ai,
+                content=(
+                    "A support agent has been assigned to your conversation and will reply soon. "
+                    "Feel free to send any additional details or context that might help "
+                    "them assist you faster."
+                ),
+            )
+            db.add(ai_msg)
+            db.commit()
+            db.refresh(ai_msg)
+            return ChatResponse(
+                message=_msg_to_response(ai_msg),
+                sources=[],
+                confidence=ConfidenceInfo(
+                    confidence_score=0.0,
+                    has_sufficient_evidence=False,
+                    escalation_action="none",
+                ),
+                evidence=EvidenceInfo(
+                    has_sufficient_evidence=False,
+                    evidence_quality="none",
+                    disclaimer=None,
+                ),
+                highlights=[],
+                total_sources_found=0,
+            )
+
     # Validate message content
     content = (body.content or "").strip()
     if not content:
@@ -153,6 +241,33 @@ async def send_message(
     db.add(user_msg)
     db.commit()
     db.refresh(user_msg)
+
+    # Handle vague/greeting messages without RAG pipeline
+    if _is_vague_message(content):
+        ai_msg = Message(
+            conversation_id=conversation_id,
+            sender_role=SenderRole.ai,
+            content=_GREETING_RESPONSE,
+        )
+        db.add(ai_msg)
+        db.commit()
+        db.refresh(ai_msg)
+        return ChatResponse(
+            message=_msg_to_response(ai_msg),
+            sources=[],
+            confidence=ConfidenceInfo(
+                confidence_score=1.0,
+                has_sufficient_evidence=True,
+                escalation_action="none",
+            ),
+            evidence=EvidenceInfo(
+                has_sufficient_evidence=True,
+                evidence_quality="strong",
+                disclaimer=None,
+            ),
+            highlights=[],
+            total_sources_found=0,
+        )
 
     # Run RAG pipeline (with error recovery)
     try:
@@ -217,6 +332,33 @@ async def send_message(
         response_time_ms=result["response_time_ms"],
     )
     db.add(query_log)
+
+    # Auto-escalate: create ticket when confidence is very low
+    if result["confidence"]["escalation_action"] == "auto":
+        try:
+            ticket_service.create_ticket(
+                db,
+                conversation_id=conversation_id,
+                customer_id=current_user.id,
+                reason="Auto-escalated: low confidence response",
+                confidence_score=result["confidence"]["confidence_score"],
+            )
+            # Notify the customer that escalation happened
+            escalation_notice = Message(
+                conversation_id=conversation_id,
+                sender_role=SenderRole.ai,
+                content=(
+                    "I wasn't confident enough in my answer, so I've connected you "
+                    "with a human support agent. They'll review your conversation and "
+                    "respond shortly. You can keep sending messages here — the agent "
+                    "will see everything."
+                ),
+            )
+            db.add(escalation_notice)
+            logger.info("Auto-escalated conv=%d (confidence=%.2f)", conversation_id, result["confidence"]["confidence_score"])
+        except Exception as esc_err:
+            logger.error("Auto-escalation failed for conv=%d: %s", conversation_id, esc_err)
+
     db.commit()
     db.refresh(ai_msg)
 
@@ -307,6 +449,79 @@ async def delete_conversation(
     _delete_conversation(conv, db)
     db.commit()
     logger.info("Deleted conversation id=%d by user=%d", conversation_id, current_user.id)
+
+
+@router.post("/{conversation_id}/escalate", response_model=EscalationResponse)
+async def escalate_conversation(
+    conversation_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Manually escalate a conversation to a human agent."""
+    conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    if conv.customer_id != current_user.id and current_user.role.value not in ("admin",):
+        raise HTTPException(status_code=403, detail="Not your conversation")
+    if conv.status == ConversationStatus.closed:
+        raise HTTPException(status_code=400, detail="This conversation is closed")
+
+    ticket = ticket_service.create_ticket(
+        db,
+        conversation_id=conversation_id,
+        customer_id=current_user.id,
+        reason="Customer requested human agent",
+    )
+
+    # Add a system-style message so the customer sees it in chat
+    system_msg = Message(
+        conversation_id=conversation_id,
+        sender_role=SenderRole.ai,
+        content=(
+            "You've been connected with a human support agent who will review "
+            "your conversation and respond shortly. Feel free to add any extra "
+            "details here — the agent will see everything you send."
+        ),
+    )
+    db.add(system_msg)
+    db.commit()
+    db.refresh(ticket)
+
+    from app.schemas.ticket import TicketResponse
+    from app.models.user import UserRole as _UR  # avoid shadowing
+
+    # Build ticket response
+    customer = db.query(User).filter(User.id == ticket.customer_id).first()
+    agent_name = None
+    if ticket.assigned_agent_id:
+        agent = db.query(User).filter(User.id == ticket.assigned_agent_id).first()
+        agent_name = agent.name if agent else None
+    msg_count = (
+        db.query(func.count(Message.id))
+        .filter(Message.conversation_id == conversation_id)
+        .scalar()
+    ) or 0
+
+    ticket_resp = TicketResponse(
+        id=ticket.id,
+        conversation_id=ticket.conversation_id,
+        customer_id=ticket.customer_id,
+        assigned_agent_id=ticket.assigned_agent_id,
+        status=ticket.status.value,
+        priority=ticket.priority.value,
+        reason=ticket.reason,
+        created_at=ticket.created_at,
+        resolved_at=ticket.resolved_at,
+        updated_at=ticket.updated_at,
+        customer_name=customer.name if customer else None,
+        agent_name=agent_name,
+        conversation_title=conv.title,
+        message_count=msg_count,
+    )
+    return EscalationResponse(
+        ticket=ticket_resp,
+        message="Conversation escalated to a human agent.",
+    )
 
 
 @router.delete("/", status_code=204)
