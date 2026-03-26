@@ -25,7 +25,7 @@ export default function Sidebar() {
   if (user?.role !== "admin") return null;
 
   return (
-    <aside className="hidden w-56 shrink-0 border-r bg-muted/40 md:block">
+    <aside className="hidden w-56 shrink-0 overflow-hidden border-r bg-muted/40 md:block">
       <nav className="flex flex-col gap-1 p-4">
         {adminLinks.map(({ to, icon: Icon, label }) => (
           <NavLink

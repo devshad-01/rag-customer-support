@@ -1,8 +1,6 @@
 """Pydantic v2 schemas for authentication endpoints."""
 
 from datetime import datetime
-from typing import Literal
-
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 
 
@@ -13,7 +11,6 @@ class UserRegister(BaseModel):
     name: str
     email: EmailStr
     password: str
-    role: Literal["customer", "agent", "admin"] = "customer"
 
     @field_validator("name")
     @classmethod

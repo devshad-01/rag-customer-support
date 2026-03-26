@@ -26,7 +26,7 @@ async def register(payload: UserRegister, db: Session = Depends(get_db)):
             name=payload.name,
             email=payload.email,
             password=payload.password,
-            role=UserRole(payload.role),
+            role=UserRole.customer,
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))

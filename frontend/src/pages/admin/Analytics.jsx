@@ -5,6 +5,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,14 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   MessageSquare,
@@ -31,11 +24,8 @@ import {
   TrendingUp,
   Clock,
   BarChart3,
-  Search,
-  Users,
   CalendarDays,
   RefreshCw,
-  Download,
   FileText,
   FileSpreadsheet,
   Loader2,
@@ -62,8 +52,6 @@ import {
   getConfidenceTrend,
   getEscalationMetrics,
   getEscalationTrend,
-  getAgentPerformance,
-  getTopQueries,
 } from "@/services/analyticsApi";
 import { toast } from "sonner";
 import {
@@ -104,6 +92,15 @@ function ChartSkeleton() {
     <div className="space-y-3 p-4">
       <Skeleton className="h-4 w-24" />
       <Skeleton className="h-[200px] w-full" />
+    </div>
+  );
+}
+
+function SectionTitle({ title, subtitle }) {
+  return (
+    <div className="mb-3">
+      <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+      {subtitle ? <p className="text-xs text-muted-foreground">{subtitle}</p> : null}
     </div>
   );
 }
@@ -180,16 +177,6 @@ export default function Analytics() {
     queryFn: () => getEscalationTrend(trendParams),
   });
 
-  const { data: agentPerf, isLoading: loadingAgents } = useQuery({
-    queryKey: ["analytics-agents"],
-    queryFn: getAgentPerformance,
-  });
-
-  const { data: topQueries, isLoading: loadingTop } = useQuery({
-    queryKey: ["analytics-top-queries"],
-    queryFn: () => getTopQueries({ limit: 10 }),
-  });
-
   // ── Chart data ───────────────────────────────────────────
   const pieData = useMemo(() => {
     if (!performance?.confidence_distribution) return [];
@@ -217,85 +204,107 @@ export default function Analytics() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header + Date Filters */}
-      <div className="flex flex-col sm:flex-row sm:items-end gap-4 justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Analytics</h1>
-          <p className="text-muted-foreground text-sm">
-            Query trends, AI performance, and escalation metrics
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5">
-            <CalendarDays className="h-4 w-4 text-muted-foreground" />
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-36 h-8 text-xs"
-              placeholder="Start date"
-            />
-            <span className="text-muted-foreground text-xs">to</span>
-            <Input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-36 h-8 text-xs"
-              placeholder="End date"
-            />
+    <div className="space-y-6">
+      <Card className="border-border/70">
+        <CardContent className="pt-6">
+          <div className="flex flex-col gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
+            <p className="text-sm text-muted-foreground">
+              Query trends, AI performance, and escalation metrics
+            </p>
           </div>
-          <Select value={interval} onValueChange={setInterval}>
-            <SelectTrigger className="w-24 h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="day">Daily</SelectItem>
-              <SelectItem value="week">Weekly</SelectItem>
-              <SelectItem value="month">Monthly</SelectItem>
-            </SelectContent>
-          </Select>
-          {(startDate || endDate) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 text-xs"
-              onClick={clearDates}
-            >
-              <RefreshCw className="h-3 w-3 mr-1" />
-              Clear
-            </Button>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 text-xs"
-            disabled={exporting !== null}
-            onClick={() => handleExport("csv")}
-          >
-            {exporting === "csv" ? (
-              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-            ) : (
-              <FileSpreadsheet className="h-3 w-3 mr-1" />
-            )}
-            Export CSV
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 text-xs"
-            disabled={exporting !== null}
-            onClick={() => handleExport("pdf")}
-          >
-            {exporting === "pdf" ? (
-              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-            ) : (
-              <FileText className="h-3 w-3 mr-1" />
-            )}
-            Export PDF
-          </Button>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/70">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Filters & Export</CardTitle>
+          <CardDescription>
+            Refine date range and interval, then export analytics summary.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5">
+                <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-36 h-8 text-xs"
+                  placeholder="Start date"
+                />
+                <span className="text-muted-foreground text-xs">to</span>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-36 h-8 text-xs"
+                  placeholder="End date"
+                />
+              </div>
+              <Select value={interval} onValueChange={setInterval}>
+                <SelectTrigger className="w-24 h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="day">Daily</SelectItem>
+                  <SelectItem value="week">Weekly</SelectItem>
+                  <SelectItem value="month">Monthly</SelectItem>
+                </SelectContent>
+              </Select>
+              {(startDate || endDate) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={clearDates}
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Clear
+                </Button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
+                disabled={exporting !== null}
+                onClick={() => handleExport("csv")}
+              >
+                {exporting === "csv" ? (
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                ) : (
+                  <FileSpreadsheet className="h-3 w-3 mr-1" />
+                )}
+                Export CSV
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
+                disabled={exporting !== null}
+                onClick={() => handleExport("pdf")}
+              >
+                {exporting === "pdf" ? (
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                ) : (
+                  <FileText className="h-3 w-3 mr-1" />
+                )}
+                Export PDF
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <SectionTitle
+        title="Overview"
+        subtitle="High-level query volume, confidence, and ticket status"
+      />
 
       {/* ── Overview Cards ────────────────────────────────── */}
       {loadingOverview ? (
@@ -338,9 +347,13 @@ export default function Analytics() {
         </div>
       )}
 
-      {/* ── Query Trends + Confidence Distribution ────────── */}
+      <SectionTitle
+        title="Trends"
+        subtitle="Query activity and confidence quality over time"
+      />
+
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 border-border/70">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <BarChart3 className="h-4 w-4" /> Query Trends
@@ -397,7 +410,7 @@ export default function Analytics() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-border/70">
           <CardHeader>
             <CardTitle className="text-base">Confidence Distribution</CardTitle>
           </CardHeader>
@@ -465,9 +478,13 @@ export default function Analytics() {
         </Card>
       </div>
 
-      {/* ── Confidence Trend + Escalation Trend ──────────── */}
+      <SectionTitle
+        title="Risk Signals"
+        subtitle="Confidence and escalation movement across selected period"
+      />
+
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
+        <Card className="border-border/70">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <TrendingUp className="h-4 w-4" /> Confidence Trend
@@ -517,7 +534,7 @@ export default function Analytics() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-border/70">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" /> Escalation Trend
@@ -565,9 +582,13 @@ export default function Analytics() {
         </Card>
       </div>
 
-      {/* ── Escalation Breakdown + Summary ───────────────── */}
+      <SectionTitle
+        title="Escalation Analysis"
+        subtitle="Breakdown by reason and operational summary"
+      />
+
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 border-border/70">
           <CardHeader>
             <CardTitle className="text-base">Escalation Breakdown</CardTitle>
           </CardHeader>
@@ -615,7 +636,7 @@ export default function Analytics() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-border/70">
           <CardHeader>
             <CardTitle className="text-base">Escalation Summary</CardTitle>
           </CardHeader>
@@ -676,132 +697,6 @@ export default function Analytics() {
         </Card>
       </div>
 
-      {/* ── Agent Performance Table ──────────────────────── */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Users className="h-4 w-4" /> Agent Performance
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loadingAgents ? (
-            <div className="space-y-2">
-              {[...Array(3)].map((_, i) => (
-                <Skeleton key={i} className="h-10 w-full" />
-              ))}
-            </div>
-          ) : !agentPerf?.agents?.length ? (
-            <p className="text-sm text-muted-foreground py-6 text-center">
-              No agent data available
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Agent</TableHead>
-                  <TableHead className="text-center">Assigned</TableHead>
-                  <TableHead className="text-center">Resolved</TableHead>
-                  <TableHead className="text-center">Pending</TableHead>
-                  <TableHead className="text-center">Avg Resolution</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {agentPerf.agents.map((agent) => (
-                  <TableRow key={agent.agent_id}>
-                    <TableCell className="font-medium">
-                      {agent.agent_name}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {agent.tickets_assigned}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="outline" className="text-green-600">
-                        {agent.tickets_resolved}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {agent.pending_tickets > 0 ? (
-                        <Badge variant="outline" className="text-yellow-600">
-                          {agent.pending_tickets}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">0</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {agent.avg_resolution_time_hours != null
-                        ? `${agent.avg_resolution_time_hours}h`
-                        : "—"}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* ── Top Queries ──────────────────────────────────── */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Search className="h-4 w-4" /> Top Queries
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loadingTop ? (
-            <div className="space-y-2">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-8 w-full" />
-              ))}
-            </div>
-          ) : !topQueries?.queries?.length ? (
-            <p className="text-sm text-muted-foreground py-6 text-center">
-              No query data available yet
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">#</TableHead>
-                  <TableHead>Query</TableHead>
-                  <TableHead className="text-center">Count</TableHead>
-                  <TableHead className="text-center">Avg Confidence</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {topQueries.queries.map((q, idx) => (
-                  <TableRow key={idx}>
-                    <TableCell className="text-muted-foreground">
-                      {idx + 1}
-                    </TableCell>
-                    <TableCell className="max-w-md truncate text-sm">
-                      {q.query_text}
-                    </TableCell>
-                    <TableCell className="text-center font-medium">
-                      {q.count}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge
-                        variant="outline"
-                        className={
-                          q.avg_confidence >= 0.7
-                            ? "text-green-600"
-                            : q.avg_confidence >= 0.4
-                              ? "text-yellow-600"
-                              : "text-red-600"
-                        }
-                      >
-                        {(q.avg_confidence * 100).toFixed(0)}%
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }

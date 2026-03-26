@@ -10,13 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Card,
   CardContent,
   CardDescription,
@@ -51,7 +44,6 @@ const registerSchema = z
     email: z.string().email("Enter a valid email"),
     password: z.string().min(6, "Password must be at least 6 characters"),
     confirmPassword: z.string(),
-    role: z.enum(["customer", "agent", "admin"]).default("customer"),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
@@ -150,19 +142,13 @@ function RegisterForm({ onSuccess }) {
   const {
     register,
     handleSubmit,
-    setValue,
-    watch,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(registerSchema),
-    defaultValues: { role: "customer" },
   });
 
-  const selectedRole = watch("role");
-
   const mutation = useMutation({
-    mutationFn: ({ name, email, password, role }) =>
-      registerUser(name, email, password, role),
+    mutationFn: ({ name, email, password }) => registerUser(name, email, password),
     onSuccess: () => {
       onSuccess?.();
     },
@@ -219,22 +205,6 @@ function RegisterForm({ onSuccess }) {
             {errors.confirmPassword.message}
           </p>
         )}
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="reg-role">Role</Label>
-        <Select value={selectedRole} onValueChange={(v) => setValue("role", v)}>
-          <SelectTrigger id="reg-role" className="w-full">
-            <SelectValue placeholder="Select a role" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="customer">Customer</SelectItem>
-            <SelectItem value="agent">Agent</SelectItem>
-            <SelectItem value="admin">Admin</SelectItem>
-          </SelectContent>
-        </Select>
-        <p className="text-[11px] text-muted-foreground">
-          For demo/testing — production would restrict this
-        </p>
       </div>
       <Button type="submit" className="w-full" disabled={mutation.isPending}>
         {mutation.isPending ? "Creating account…" : "Create Account"}
