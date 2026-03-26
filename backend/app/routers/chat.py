@@ -51,6 +51,36 @@ _GREETING_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
+_STOP_WORDS = {
+    "a", "an", "the", "and", "or", "but", "if", "then", "than", "to", "of", "in", "on", "at", "for",
+    "with", "from", "by", "is", "are", "was", "were", "be", "been", "being", "do", "does", "did",
+    "can", "could", "should", "would", "will", "may", "might", "i", "you", "we", "they", "he", "she",
+    "it", "my", "your", "our", "their", "me", "us", "them", "this", "that", "these", "those", "how",
+    "what", "where", "when", "why", "which", "who", "whom", "about", "please", "help",
+}
+
+
+def _topic_tokens(text: str) -> set[str]:
+    """Extract lightweight topic tokens for simple query-shift detection."""
+    tokens = re.findall(r"[a-zA-Z0-9']+", (text or "").lower())
+    return {token for token in tokens if len(token) > 2 and token not in _STOP_WORDS}
+
+
+def _is_topic_shift(previous_query: str | None, current_query: str) -> bool:
+    """Return True when the current query appears semantically different from previous."""
+    if not previous_query:
+        return True
+
+    prev = _topic_tokens(previous_query)
+    curr = _topic_tokens(current_query)
+    if not prev or not curr:
+        return False
+
+    overlap = len(prev & curr)
+    union = len(prev | curr)
+    jaccard = overlap / union if union else 0.0
+    return jaccard < 0.2
+
 def _build_greeting_response(customer_name: str | None) -> str:
     """Return a personalized greeting for vague/hello messages."""
     first_name = (customer_name or "").strip().split(" ")[0]
@@ -278,6 +308,19 @@ async def send_message(
         except (json.JSONDecodeError, TypeError):
             continue
 
+    previous_customer_msg = (
+        db.query(Message.content)
+        .filter(
+            Message.conversation_id == conversation_id,
+            Message.sender_role == SenderRole.customer,
+            Message.id != user_msg.id,
+        )
+        .order_by(Message.created_at.desc())
+        .first()
+    )
+    previous_customer_query = previous_customer_msg[0] if previous_customer_msg else None
+    topic_shift = _is_topic_shift(previous_customer_query, content)
+
     # Handle vague/greeting messages without RAG pipeline
     if _is_vague_message(content):
         ai_msg = Message(
@@ -355,9 +398,11 @@ async def send_message(
         }
 
     # Prepare sources + confidence + evidence JSON to store with AI message.
-    # Show metadata only when we have references, and only once per conversation.
+    # Show metadata only when we have references, and:
+    # - first referenced answer in conversation, or
+    # - user changed to a new topic.
     has_references = bool(result["sources"])
-    include_metadata = has_references and not metadata_already_shown
+    include_metadata = has_references and (not metadata_already_shown or topic_shift)
     metadata = {
         "sources": result["sources"],
         "confidence": result["confidence"],

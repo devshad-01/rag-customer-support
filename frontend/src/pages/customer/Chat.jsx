@@ -543,6 +543,20 @@ export default function Chat() {
 
   const isSending = sendMutation.isPending || createMutation.isPending;
 
+  const shouldShowOptimistic = !!(
+    optimisticMsg &&
+    !messages.some(
+      (msg) =>
+        msg.sender_role === "customer" &&
+        msg.content === optimisticMsg.content &&
+        Math.abs(
+          new Date(msg.created_at).getTime() -
+            new Date(optimisticMsg.created_at).getTime()
+        ) <
+          20000
+    )
+  );
+
   return (
     <div className="relative flex h-screen bg-background p-3 gap-3">
       {/* ── Sidebar open button (visible when sidebar closed) ── */}
@@ -752,7 +766,7 @@ export default function Chat() {
                     />
                   ))
                 )}
-                {optimisticMsg && (
+                {shouldShowOptimistic && (
                   <ChatBubble message={optimisticMsg} onViewDocument={setPreviewDocId} />
                 )}
                 {isSending && <TypingIndicator />}
