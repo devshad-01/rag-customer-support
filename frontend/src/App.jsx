@@ -12,6 +12,7 @@ import AdminDashboard from "@/pages/admin/Dashboard";
 import Documents from "@/pages/admin/Documents";
 import Analytics from "@/pages/admin/Analytics";
 import Reports from "@/pages/admin/Reports";
+import AIConfig from "@/pages/admin/AIConfig";
 
 function RoleRedirect() {
   const { loading } = useAuth();
@@ -76,6 +77,14 @@ export default function App() {
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <Reports />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/ai-config"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AIConfig />
             </ProtectedRoute>
           }
         />

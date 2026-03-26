@@ -7,7 +7,6 @@ import {
   sendMessage,
   deleteConversation,
   clearAllConversations,
-  escalateConversation,
 } from "@/services/chatApi";
 import { getDocumentPreview } from "@/services/documentApi";
 import { Button } from "@/components/ui/button";
@@ -284,8 +283,6 @@ function ChatBubble({ message, onViewDocument }) {
           {message.content}
         </div>
 
-        {!isUser && <EvidenceWarning evidence={evidence} />}
-
         <div className="flex items-center gap-2">
           {!isUser && <ConfidenceBadge confidence={message.confidence} />}
           <span className="text-[10px] text-muted-foreground">
@@ -509,32 +506,6 @@ export default function Chat() {
     if (conversations.length === 0) return;
     clearAllMutation.mutate();
   };
-
-  // Escalate to human agent
-  const escalateMutation = useMutation({
-    mutationFn: (conversationId) => escalateConversation(conversationId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["messages", activeConvId] });
-      queryClient.invalidateQueries({ queryKey: ["conversations"] });
-      toast.success("Conversation escalated to a human agent");
-    },
-    onError: (err) => {
-      toast.error(err.response?.data?.detail || "Failed to escalate");
-    },
-  });
-
-  const handleEscalate = () => {
-    if (!activeConvId) return;
-    escalateMutation.mutate(activeConvId);
-  };
-
-  // Check if the latest AI message suggests escalation
-  const lastAiMessage = [...messages].reverse().find((m) => m.sender_role === "ai");
-  const showEscalateButton =
-    activeConvId &&
-    lastAiMessage?.confidence?.escalation_action === "offer" &&
-    !messages.some((m) => m.sender_role === "agent") &&
-    !escalateMutation.isSuccess;
 
   const handleSend = async () => {
     const trimmed = input.trim();
@@ -788,39 +759,6 @@ export default function Chat() {
                 <div ref={messagesEndRef} />
               </div>
             </div>
-
-            {/* Escalation offer button */}
-            {showEscalateButton && (
-              <div className="px-4 pb-2">
-                <div className="mx-auto max-w-3xl">
-                  <div className="flex items-center gap-3 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 dark:border-orange-800 dark:bg-orange-950/40">
-                    <Headset className="h-5 w-5 shrink-0 text-orange-600 dark:text-orange-400" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-orange-900 dark:text-orange-200">
-                        Want to talk to a human agent?
-                      </p>
-                      <p className="text-xs text-orange-700 dark:text-orange-400">
-                        Our AI might not have the best answer for this question.
-                      </p>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="shrink-0 border-orange-300 text-orange-700 hover:bg-orange-100 dark:border-orange-700 dark:text-orange-300 dark:hover:bg-orange-900"
-                      onClick={handleEscalate}
-                      disabled={escalateMutation.isPending}
-                    >
-                      {escalateMutation.isPending ? (
-                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Headset className="mr-1.5 h-3.5 w-3.5" />
-                      )}
-                      Talk to a Human
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Input bar — seamless */}
             <div className="px-4 pb-4 pt-2">

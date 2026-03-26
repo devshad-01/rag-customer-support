@@ -4,9 +4,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Thresholds (from proposal: < 0.4 auto-escalate, 0.4-0.7 offer, > 0.7 deliver)
+# Threshold (auto-escalate only policy)
 AUTO_ESCALATE_THRESHOLD = 0.4
-OFFER_ESCALATION_THRESHOLD = 0.7
 
 
 def calculate_confidence(chunks: list[dict]) -> dict:
@@ -22,7 +21,7 @@ def calculate_confidence(chunks: list[dict]) -> dict:
         dict with:
           confidence_score  — float 0-1
           has_sufficient_evidence — bool
-          escalation_action — 'none' | 'offer' | 'auto'
+                    escalation_action — 'none' | 'auto'
     """
     if not chunks:
         return {
@@ -41,13 +40,10 @@ def calculate_confidence(chunks: list[dict]) -> dict:
     # Clamp to [0, 1]
     confidence = max(0.0, min(1.0, confidence))
 
-    # Determine escalation action
+    # Determine escalation action (auto-only policy)
     if confidence < AUTO_ESCALATE_THRESHOLD:
         action = "auto"
         sufficient = False
-    elif confidence < OFFER_ESCALATION_THRESHOLD:
-        action = "offer"
-        sufficient = True
     else:
         action = "none"
         sufficient = True

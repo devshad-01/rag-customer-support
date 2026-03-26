@@ -13,6 +13,7 @@ from app.routers import chat as chat_router
 from app.routers import tickets as tickets_router
 from app.routers import analytics as analytics_router
 from app.routers import reports as reports_router
+from app.routers import ai_config as ai_config_router
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ async def lifespan(app: FastAPI):
 
     # Auto-create tables if they don't exist (safe for production — won't drop existing)
     from app.database import engine, Base
-    from app.models import user, document, conversation, ticket, query_log  # noqa: F401
+    from app.models import user, document, conversation, ticket, query_log, ai_config  # noqa: F401
     try:
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables verified/created")
@@ -93,6 +94,7 @@ app.include_router(chat_router.router)
 app.include_router(tickets_router.router)
 app.include_router(analytics_router.router)
 app.include_router(reports_router.router)
+app.include_router(ai_config_router.router)
 
 
 # ── Health check ──────────────────────────────────────────────

@@ -6,6 +6,7 @@ import {
   BarChart3,
   LayoutDashboard,
   Download,
+  Settings2,
 } from "lucide-react";
 
 const adminLinks = [
@@ -13,6 +14,7 @@ const adminLinks = [
   { to: "/admin/documents", icon: FileText, label: "Documents" },
   { to: "/admin/analytics", icon: BarChart3, label: "Analytics" },
   { to: "/admin/reports", icon: Download, label: "Reports" },
+  { to: "/admin/ai-config", icon: Settings2, label: "AI Config" },
 ];
 
 export default function Sidebar() {

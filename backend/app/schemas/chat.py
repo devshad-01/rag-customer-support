@@ -50,7 +50,7 @@ class ConfidenceInfo(BaseModel):
     """Confidence metadata for an AI response."""
     confidence_score: float
     has_sufficient_evidence: bool
-    escalation_action: str  # "none" | "offer" | "auto"
+    escalation_action: str  # "none" | "auto"
 
 
 class MessageResponse(BaseModel):

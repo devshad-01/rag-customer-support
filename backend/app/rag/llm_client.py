@@ -98,13 +98,13 @@ async def generate_response(prompt: str) -> str:
         logger.error("Cannot connect to Ollama at %s", settings.OLLAMA_BASE_URL)
         return (
             "I'm sorry, the AI service is currently unavailable. "
-            "Please try again later or ask to speak with a human agent."
+            "Please try again later or ask to speak with a support agent."
         )
     except httpx.HTTPStatusError as exc:
         logger.error("Ollama returned HTTP %d: %s", exc.response.status_code, exc.response.text[:200])
         return (
             "I encountered an error while generating a response. "
-            "Please try again or escalate to a human agent."
+            "Please try again or escalate to a support agent."
         )
     except Exception as exc:
         logger.error("LLM generation failed (%s): %s", provider, exc)

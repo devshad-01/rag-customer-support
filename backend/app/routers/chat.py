@@ -28,11 +28,16 @@ from app.schemas.chat import (
     SourceReference,
 )
 from app.schemas.ticket import EscalationResponse
-from app.services import ticket_service
+from app.services import ticket_service, ai_config_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/chat", tags=["Chat"])
+
+AUTO_ESCALATION_MESSAGE = (
+    "I'm connecting you to a support agent now. "
+    "They'll review your conversation and reply shortly."
+)
 
 # ── Greeting / vague message detection ────────────────────────
 
@@ -46,14 +51,20 @@ _GREETING_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
-_GREETING_RESPONSE = (
-    "Hello! I'm here to help you with any questions about NovaTech Solutions' "
-    "products and services. Feel free to ask me anything specific, for example:\n\n"
-    "- What is your return policy?\n"
-    "- How do I set up my SmartHome Hub?\n"
-    "- What warranty coverage do you offer?\n\n"
-    "How can I assist you today?"
-)
+def _build_greeting_response(customer_name: str | None) -> str:
+    """Return a personalized greeting for vague/hello messages."""
+    first_name = (customer_name or "").strip().split(" ")[0]
+    if first_name:
+        return (
+            f"Hello {first_name}, thank you for contacting SupportIQ. "
+            "I can help with questions about our products and services. "
+            "How can I help you today?"
+        )
+    return (
+        "Hello, thank you for contacting SupportIQ. "
+        "I can help with questions about our products and services. "
+        "How can I help you today?"
+    )
 
 def _is_vague_message(content: str) -> bool:
     """Return True if the message is a greeting or too vague for RAG."""
@@ -183,7 +194,8 @@ async def send_message(
             .first()
         )
         if open_ticket:
-            # Save the customer message so the agent can see it
+            # Save the customer message so the agent can see it,
+            # but do NOT repeat an AI holding message each time.
             content = (body.content or "").strip()
             if not content:
                 raise HTTPException(status_code=400, detail="Message cannot be empty")
@@ -193,21 +205,10 @@ async def send_message(
                 content=content,
             )
             db.add(user_msg)
-            # Reply with a holding message (no RAG pipeline)
-            ai_msg = Message(
-                conversation_id=conversation_id,
-                sender_role=SenderRole.ai,
-                content=(
-                    "A support agent has been assigned to your conversation and will reply soon. "
-                    "Feel free to send any additional details or context that might help "
-                    "them assist you faster."
-                ),
-            )
-            db.add(ai_msg)
             db.commit()
-            db.refresh(ai_msg)
+            db.refresh(user_msg)
             return ChatResponse(
-                message=_msg_to_response(ai_msg),
+                message=_msg_to_response(user_msg),
                 sources=[],
                 confidence=ConfidenceInfo(
                     confidence_score=0.0,
@@ -247,7 +248,7 @@ async def send_message(
         ai_msg = Message(
             conversation_id=conversation_id,
             sender_role=SenderRole.ai,
-            content=_GREETING_RESPONSE,
+            content=_build_greeting_response(current_user.name),
         )
         db.add(ai_msg)
         db.commit()
@@ -271,13 +272,21 @@ async def send_message(
 
     # Run RAG pipeline (with error recovery)
     try:
-        result = await process_query(content)
+        cfg = ai_config_service.get_or_create_config(db)
+        result = await process_query(
+            content,
+            ai_config={
+                "system_template_extension": cfg.system_template_extension,
+                "no_escalate_out_of_scope": cfg.no_escalate_out_of_scope,
+            },
+            customer_name=current_user.name,
+        )
     except Exception as exc:
         logger.error("RAG pipeline crashed for conv=%d: %s", conversation_id, exc)
         result = {
             "response": (
                 "I'm sorry, I encountered an error while processing your question. "
-                "Please try again or ask to speak with a human agent."
+                "Please try again or ask to speak with a support agent."
             ),
             "sources": [],
             "confidence": {
@@ -302,6 +311,10 @@ async def send_message(
         "evidence": result["evidence"],
         "highlights": result["highlights"],
     }
+
+    # Keep customer-facing response concise for auto-escalation.
+    if result["confidence"]["escalation_action"] == "auto":
+        result["response"] = AUTO_ESCALATION_MESSAGE
 
     # Save AI message
     ai_msg = Message(
@@ -343,18 +356,6 @@ async def send_message(
                 reason="Auto-escalated: low confidence response",
                 confidence_score=result["confidence"]["confidence_score"],
             )
-            # Notify the customer that escalation happened
-            escalation_notice = Message(
-                conversation_id=conversation_id,
-                sender_role=SenderRole.ai,
-                content=(
-                    "I wasn't confident enough in my answer, so I've connected you "
-                    "with a human support agent. They'll review your conversation and "
-                    "respond shortly. You can keep sending messages here — the agent "
-                    "will see everything."
-                ),
-            )
-            db.add(escalation_notice)
             logger.info("Auto-escalated conv=%d (confidence=%.2f)", conversation_id, result["confidence"]["confidence_score"])
         except Exception as esc_err:
             logger.error("Auto-escalation failed for conv=%d: %s", conversation_id, esc_err)
@@ -457,7 +458,7 @@ async def escalate_conversation(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Manually escalate a conversation to a human agent."""
+    """Manually escalate a conversation to a support agent."""
     conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
@@ -470,7 +471,7 @@ async def escalate_conversation(
         db,
         conversation_id=conversation_id,
         customer_id=current_user.id,
-        reason="Customer requested human agent",
+        reason="Customer requested support agent",
     )
 
     # Add a system-style message so the customer sees it in chat
@@ -478,9 +479,8 @@ async def escalate_conversation(
         conversation_id=conversation_id,
         sender_role=SenderRole.ai,
         content=(
-            "You've been connected with a human support agent who will review "
-            "your conversation and respond shortly. Feel free to add any extra "
-            "details here — the agent will see everything you send."
+            "I'm connecting you to a support agent now. "
+            "They'll review your conversation and reply shortly."
         ),
     )
     db.add(system_msg)
@@ -520,7 +520,7 @@ async def escalate_conversation(
     )
     return EscalationResponse(
         ticket=ticket_resp,
-        message="Conversation escalated to a human agent.",
+        message="Conversation escalated to a support agent.",
     )
 
 

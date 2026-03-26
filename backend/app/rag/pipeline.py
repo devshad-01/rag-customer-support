@@ -4,7 +4,7 @@ import logging
 import time
 
 from app.rag.retriever import retrieve_relevant_chunks
-from app.rag.prompt_builder import build_prompt
+from app.rag.prompt_builder import build_prompt, build_out_of_scope_prompt
 from app.rag.llm_client import generate_response
 from app.rag.confidence import calculate_confidence
 from app.rag.explainability import (
@@ -16,7 +16,11 @@ from app.rag.explainability import (
 logger = logging.getLogger(__name__)
 
 
-async def process_query(query: str) -> dict:
+async def process_query(
+    query: str,
+    ai_config: dict | None = None,
+    customer_name: str | None = None,
+) -> dict:
     """Run the full RAG pipeline for a customer query.
 
     Steps:
@@ -44,8 +48,42 @@ async def process_query(query: str) -> dict:
     start = time.perf_counter()
 
     try:
+        ai_config = ai_config or {}
+        system_template_extension = ai_config.get("system_template_extension", "")
+        no_escalate_out_of_scope = bool(ai_config.get("no_escalate_out_of_scope", True))
+
         # Step 1 — Retrieve
         chunks = retrieve_relevant_chunks(query, top_k=5)
+
+        # Out-of-scope handling (no-escalation policy when configured)
+        if not chunks and no_escalate_out_of_scope:
+            out_of_scope_prompt = build_out_of_scope_prompt(
+                query=query,
+                customer_name=customer_name,
+                system_template_extension=system_template_extension,
+            )
+            dynamic_response = await generate_response(out_of_scope_prompt)
+            elapsed_ms = int((time.perf_counter() - start) * 1000)
+            return {
+                "response": (
+                    dynamic_response
+                    or "I can best help with questions about our products and services."
+                ).strip(),
+                "sources": [],
+                "confidence": {
+                    "confidence_score": 0.0,
+                    "has_sufficient_evidence": False,
+                    "escalation_action": "none",
+                },
+                "evidence": {
+                    "evidence_quality": "none",
+                    "has_sufficient_evidence": False,
+                    "disclaimer": None,
+                },
+                "highlights": [],
+                "total_sources_found": 0,
+                "response_time_ms": elapsed_ms,
+            }
 
         # Step 2 — Score confidence
         confidence = calculate_confidence(chunks)
@@ -68,14 +106,10 @@ async def process_query(query: str) -> dict:
         evidence = assess_evidence_sufficiency(sources, confidence["confidence_score"])
 
         # Step 5 — Build prompt & generate
-        prompt = build_prompt(query, chunks)
+        prompt = build_prompt(query, chunks, system_template_extension=system_template_extension)
         response_text = await generate_response(prompt)
 
-        # Step 6 — Prepend disclaimer if evidence is weak
-        if evidence["disclaimer"]:
-            response_text = f"⚠️ {evidence['disclaimer']}\n\n{response_text}"
-
-        # Step 7 — Highlight relevant passages
+        # Step 6 — Highlight relevant passages
         highlights = highlight_relevant_passages(response_text, sources)
 
     except Exception as exc:
@@ -84,7 +118,7 @@ async def process_query(query: str) -> dict:
         return {
             "response": (
                 "I'm sorry, I encountered an error while processing your question. "
-                "Please try again or ask to speak with a human agent."
+                "Please try again or ask to speak with a support agent."
             ),
             "sources": [],
             "confidence": {
