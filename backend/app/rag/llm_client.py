@@ -39,7 +39,7 @@ async def _generate_ollama(prompt: str) -> str:
         "options": {
             "temperature": 0.3,
             "top_p": 0.9,
-            "num_predict": 512,
+            "num_predict": 1024,
         },
     }
 
@@ -67,7 +67,7 @@ async def _generate_gemini(prompt: str) -> str:
         config=genai.types.GenerateContentConfig(
             temperature=0.3,
             top_p=0.9,
-            max_output_tokens=512,
+            max_output_tokens=1024,
         ),
     )
     answer = response.text.strip() if response.text else ""

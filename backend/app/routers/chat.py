@@ -243,12 +243,47 @@ async def send_message(
     db.commit()
     db.refresh(user_msg)
 
+    # Conversation-level context flags
+    has_prior_ai_reply = (
+        db.query(Message.id)
+        .filter(
+            Message.conversation_id == conversation_id,
+            Message.sender_role == SenderRole.ai,
+            Message.id != user_msg.id,
+        )
+        .first()
+        is not None
+    )
+
+    prior_ai_metadata_rows = (
+        db.query(Message.sources_json)
+        .filter(
+            Message.conversation_id == conversation_id,
+            Message.sender_role == SenderRole.ai,
+            Message.sources_json.isnot(None),
+        )
+        .all()
+    )
+
+    metadata_already_shown = False
+    for (sources_json,) in prior_ai_metadata_rows:
+        try:
+            raw = json.loads(sources_json)
+            if isinstance(raw, dict) and raw.get("sources"):
+                metadata_already_shown = True
+                break
+            if isinstance(raw, list) and raw:
+                metadata_already_shown = True
+                break
+        except (json.JSONDecodeError, TypeError):
+            continue
+
     # Handle vague/greeting messages without RAG pipeline
     if _is_vague_message(content):
         ai_msg = Message(
             conversation_id=conversation_id,
             sender_role=SenderRole.ai,
-            content=_build_greeting_response(current_user.name),
+            content=_build_greeting_response(current_user.name if not has_prior_ai_reply else None),
         )
         db.add(ai_msg)
         db.commit()
@@ -273,13 +308,28 @@ async def send_message(
     # Run RAG pipeline (with error recovery)
     try:
         cfg = ai_config_service.get_or_create_config(db)
+
+        # Recent conversation context for better continuity
+        recent = (
+            db.query(Message)
+            .filter(Message.conversation_id == conversation_id)
+            .order_by(Message.created_at.desc())
+            .limit(8)
+            .all()
+        )
+        recent_messages = [
+            {"sender_role": m.sender_role.value, "content": m.content}
+            for m in reversed(recent)
+        ]
+
         result = await process_query(
             content,
             ai_config={
                 "system_template_extension": cfg.system_template_extension,
                 "no_escalate_out_of_scope": cfg.no_escalate_out_of_scope,
             },
-            customer_name=current_user.name,
+            customer_name=current_user.name if not has_prior_ai_reply else None,
+            recent_messages=recent_messages,
         )
     except Exception as exc:
         logger.error("RAG pipeline crashed for conv=%d: %s", conversation_id, exc)
@@ -304,7 +354,10 @@ async def send_message(
             "response_time_ms": 0,
         }
 
-    # Prepare sources + confidence + evidence JSON to store with AI message
+    # Prepare sources + confidence + evidence JSON to store with AI message.
+    # Show metadata only when we have references, and only once per conversation.
+    has_references = bool(result["sources"])
+    include_metadata = has_references and not metadata_already_shown
     metadata = {
         "sources": result["sources"],
         "confidence": result["confidence"],
@@ -321,7 +374,7 @@ async def send_message(
         conversation_id=conversation_id,
         sender_role=SenderRole.ai,
         content=result["response"],
-        sources_json=json.dumps(metadata, default=str),
+        sources_json=json.dumps(metadata, default=str) if include_metadata else None,
         confidence_score=result["confidence"]["confidence_score"],
     )
     db.add(ai_msg)
@@ -364,10 +417,18 @@ async def send_message(
     db.refresh(ai_msg)
 
     # Build response
-    sources = [SourceReference(**s) for s in result["sources"]]
-    confidence = ConfidenceInfo(**result["confidence"])
-    evidence = EvidenceInfo(**result["evidence"])
-    highlights = [HighlightMapping(**h) for h in result["highlights"]]
+    if include_metadata:
+        sources = [SourceReference(**s) for s in result["sources"]]
+        confidence = ConfidenceInfo(**result["confidence"])
+        evidence = EvidenceInfo(**result["evidence"])
+        highlights = [HighlightMapping(**h) for h in result["highlights"]]
+        total_sources_found = result["total_sources_found"]
+    else:
+        sources = []
+        confidence = None
+        evidence = None
+        highlights = []
+        total_sources_found = 0
 
     return ChatResponse(
         message=_msg_to_response(ai_msg),
@@ -375,7 +436,7 @@ async def send_message(
         confidence=confidence,
         evidence=evidence,
         highlights=highlights,
-        total_sources_found=result["total_sources_found"],
+        total_sources_found=total_sources_found,
     )
 
 

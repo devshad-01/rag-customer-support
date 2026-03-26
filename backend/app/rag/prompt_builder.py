@@ -6,6 +6,7 @@ logger = logging.getLogger(__name__)
 
 CONTEXT_HEADER = "Context (retrieved documents):"
 CONTEXT_SEPARATOR = "---"
+HISTORY_HEADER = "Recent conversation context:"
 
 
 def _format_chunk(chunk: dict, index: int) -> str:
@@ -20,7 +21,36 @@ def _format_chunk(chunk: dict, index: int) -> str:
     )
 
 
-def build_prompt(query: str, chunks: list[dict], system_template_extension: str = "") -> str:
+def _format_history(messages: list[dict], max_messages: int = 8) -> str:
+    """Format recent conversation messages for continuity in prompting."""
+    if not messages:
+        return "No prior messages."
+
+    trimmed = messages[-max_messages:]
+    lines: list[str] = []
+    for msg in trimmed:
+        role = (msg.get("sender_role") or "unknown").lower()
+        if role == "customer":
+            label = "Customer"
+        elif role == "agent":
+            label = "Support Agent"
+        else:
+            label = "Assistant"
+
+        content = (msg.get("content") or "").strip().replace("\n", " ")
+        if len(content) > 240:
+            content = content[:240].rstrip() + "…"
+        lines.append(f"- {label}: {content}")
+
+    return "\n".join(lines)
+
+
+def build_prompt(
+    query: str,
+    chunks: list[dict],
+    system_template_extension: str = "",
+    recent_messages: list[dict] | None = None,
+) -> str:
     """Build a full prompt string from the user query and retrieved chunks.
 
     Args:
@@ -52,8 +82,18 @@ def build_prompt(query: str, chunks: list[dict], system_template_extension: str 
         or "Respond as a professional support agent. Be concise and accurate."
     )
 
+    history_block = (
+        f"{HISTORY_HEADER}\n{_format_history(recent_messages or [])}\n\n"
+    )
+
     prompt = (
-        f"Instructions:\n{instruction_block}\n\n"
+        f"Instructions:\n{instruction_block}\n"
+        "Response style rules:\n"
+        "- Sound natural and conversational, like a real support agent.\n"
+        "- For informational questions, give a fuller answer in 2-4 short paragraphs.\n"
+        "- Include key conditions/limits and practical next steps when relevant.\n"
+        "- Avoid one-line answers unless the question is truly simple.\n\n"
+        f"{history_block}"
         f"{context_block}\n\n"
         f"Customer question: {query}\n\n"
         "Answer:"
@@ -67,6 +107,7 @@ def build_out_of_scope_prompt(
     query: str,
     customer_name: str | None = None,
     system_template_extension: str = "",
+    recent_messages: list[dict] | None = None,
 ) -> str:
     """Build a prompt for dynamic out-of-scope responses.
 
@@ -85,12 +126,14 @@ def build_out_of_scope_prompt(
         "Out-of-scope handling rules:\n"
         "- The customer question is outside current company operations/content.\n"
         "- Do NOT escalate this conversation.\n"
-        "- Respond naturally in 1-3 short sentences.\n"
+        "- Respond naturally in 2-4 short sentences.\n"
         "- Avoid rigid or canned wording; sound conversational and human.\n"
         "- If customer name is provided, greet them once by first name.\n"
         "- Do not mention internal systems, confidence, retrieval, or knowledge base.\n"
         "- Politely guide the user back to company-related topics.\n"
+        "- Invite the user to share a bit more context so you can help with relevant products or services.\n"
         "\n"
+        f"{HISTORY_HEADER}\n{_format_history(recent_messages or [])}\n\n"
         f"{name_line}"
         f"Customer question: {query}\n\n"
         "Reply:"
