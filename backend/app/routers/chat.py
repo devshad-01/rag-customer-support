@@ -109,6 +109,42 @@ def _is_vague_message(content: str) -> bool:
     return False
 
 
+def _normalize_title(text: str, max_len: int = 80) -> str:
+    """Convert a message into a concise conversation title."""
+    cleaned = re.sub(r"\s+", " ", (text or "").strip())
+    if len(cleaned) <= max_len:
+        return cleaned
+    return cleaned[:max_len].rstrip() + "\u2026"
+
+
+def _is_generic_title(title: str | None) -> bool:
+    """Return True when title is missing or too generic (e.g., 'hello')."""
+    if not title:
+        return True
+    stripped = title.strip()
+    if not stripped:
+        return True
+    if _is_vague_message(stripped):
+        return True
+    generic_values = {
+        "new chat",
+        "chat",
+        "conversation",
+        "support",
+        "help",
+    }
+    return stripped.lower() in generic_values
+
+
+def _update_conversation_title_if_needed(conv: Conversation, customer_message: str) -> None:
+    """Set/update conversation title when current title is generic and message is meaningful."""
+    if not _is_generic_title(conv.title):
+        return
+    if _is_vague_message(customer_message):
+        return
+    conv.title = _normalize_title(customer_message)
+
+
 # ── Helper ────────────────────────────────────────────────────
 
 def _msg_to_response(msg: Message) -> MessageResponse:
@@ -229,6 +265,9 @@ async def send_message(
             content = (body.content or "").strip()
             if not content:
                 raise HTTPException(status_code=400, detail="Message cannot be empty")
+
+            _update_conversation_title_if_needed(conv, content)
+
             user_msg = Message(
                 conversation_id=conversation_id,
                 sender_role=SenderRole.customer,
@@ -259,9 +298,8 @@ async def send_message(
     if not content:
         raise HTTPException(status_code=400, detail="Message cannot be empty")
 
-    # Auto-set conversation title from first message
-    if not conv.title:
-        conv.title = content[:80] + ("\u2026" if len(content) > 80 else "")
+    # Set/update title only when the message is meaningful (not generic greeting).
+    _update_conversation_title_if_needed(conv, content)
 
     # Save user message
     user_msg = Message(
